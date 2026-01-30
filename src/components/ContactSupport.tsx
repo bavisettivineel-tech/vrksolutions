@@ -3,53 +3,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-interface Message {
-  id: string;
-  type: "user" | "support";
-  content: string;
-  timestamp: Date;
-}
+import { useSupportChat } from "@/hooks/useSupportChat";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDistanceToNow } from "date-fns";
 
 const ContactSupport = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "support",
-      content: "Welcome to VRK Solutions support! How can we help you today?",
-      timestamp: new Date(),
-    },
-  ]);
   const [inputValue, setInputValue] = useState("");
+  const { messages, sendMessage, isLoading } = useSupportChat();
+  const { user } = useAuth();
 
   const handleCall = () => {
     window.location.href = "tel:8297458070";
   };
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  const handleSend = async () => {
+    if (!inputValue.trim() || !user) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: "user",
-      content: inputValue,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    await sendMessage(inputValue);
     setInputValue("");
-
-    // Simulate support response
-    setTimeout(() => {
-      const supportResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: "support",
-        content: "Thank you for reaching out! Our team will respond shortly. For immediate assistance, please call us at 8297458070.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, supportResponse]);
-    }, 1500);
   };
 
   return (
@@ -100,28 +72,38 @@ const ContactSupport = () => {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-2xl ${
-                      message.type === "user"
-                        ? "gradient-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted text-foreground rounded-bl-md"
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <span className="text-[10px] opacity-70 mt-1 block">
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              ))}
+              ) : messages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Start a conversation with our support team</p>
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.is_from_admin ? "justify-start" : "justify-end"}`}
+                  >
+                    <div
+                      className={`max-w-[80%] p-3 rounded-2xl ${
+                        message.is_from_admin
+                          ? "bg-muted text-foreground rounded-bl-md"
+                          : "gradient-primary text-primary-foreground rounded-br-md"
+                      }`}
+                    >
+                      <p className="text-sm">{message.message}</p>
+                      <span className="text-[10px] opacity-70 mt-1 block">
+                        {formatDistanceToNow(new Date(message.created_at), {
+                          addSuffix: true,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Input */}

@@ -16,67 +16,57 @@ import BottomNavigation from "@/components/BottomNavigation";
 import TopNavigation from "@/components/TopNavigation";
 import AIAssistantButton from "@/components/AIAssistantButton";
 import ContactSupport from "@/components/ContactSupport";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
 const queryClient = new QueryClient();
 
-interface User {
-  name: string;
-  phone: string;
-  isAdmin: boolean;
-}
-
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, profile, isAdmin, isLoading, signOut } = useAuth();
 
-  // Check for existing session
+  // Show splash screen initially
   useEffect(() => {
-    const savedUser = localStorage.getItem("vrk_user");
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-        setShowSplash(false);
-      } catch {
-        localStorage.removeItem("vrk_user");
-      }
+    if (!isLoading && user) {
+      setShowSplash(false);
     }
-  }, []);
-
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem("vrk_user", JSON.stringify(userData));
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem("vrk_user");
-  };
+  }, [isLoading, user]);
 
   // Show splash screen
-  if (showSplash && !user) {
+  if (showSplash && !user && !isLoading) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   // Show login if not authenticated
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen />;
   }
 
   // Show admin panel for admin users
-  if (user.isAdmin) {
-    return <AdminPanel onLogout={handleLogout} />;
+  if (isAdmin) {
+    return <AdminPanel onLogout={signOut} />;
   }
+
+  const userName = profile?.name || "Student";
 
   // Student view
   return (
     <BrowserRouter>
-      <TopNavigation userName={user.name} onLogout={handleLogout} />
+      <TopNavigation userName={userName} onLogout={signOut} />
       <Routes>
-        <Route path="/" element={<StudentHome userName={user.name} />} />
+        <Route path="/" element={<StudentHome userName={userName} />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/category/:categoryId" element={<CategoryDetailPage />} />
         <Route path="/eapcet" element={<EAPCETPage />} />
-        <Route path="/account" element={<AccountPage user={user} onLogout={handleLogout} />} />
+        <Route path="/account" element={<AccountPage onLogout={signOut} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNavigation />
@@ -88,11 +78,13 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

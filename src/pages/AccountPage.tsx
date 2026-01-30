@@ -2,21 +2,25 @@ import { useNavigate } from "react-router-dom";
 import { User, Phone, LogOut, ChevronRight, HelpCircle, Shield, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
 import vrkLogo from "@/assets/vrk-logo.png";
 
 interface AccountPageProps {
-  user: { name: string; phone: string };
   onLogout: () => void;
 }
 
-const AccountPage = ({ user, onLogout }: AccountPageProps) => {
+const AccountPage = ({ onLogout }: AccountPageProps) => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const menuItems = [
     { icon: Bell, label: "Notifications", onClick: () => {} },
     { icon: HelpCircle, label: "Help & Support", onClick: () => {} },
     { icon: Shield, label: "Privacy Policy", onClick: () => {} },
   ];
+
+  const userName = profile?.name || "Student";
+  const userPhone = profile?.phone || "";
 
   return (
     <div className="min-h-screen pb-20 md:pb-6 md:pt-20 bg-background">
@@ -33,10 +37,10 @@ const AccountPage = ({ user, onLogout }: AccountPageProps) => {
               <User className="h-8 w-8 text-primary-foreground" />
             </div>
             <div className="flex-1">
-              <h2 className="font-display font-semibold text-xl">{user.name}</h2>
+              <h2 className="font-display font-semibold text-xl">{userName}</h2>
               <div className="flex items-center gap-1.5 text-muted-foreground mt-1">
                 <Phone className="h-4 w-4" />
-                <span className="text-sm">{user.phone}</span>
+                <span className="text-sm">{userPhone}</span>
               </div>
             </div>
           </div>
