@@ -1,15 +1,26 @@
 import { useState } from "react";
-import { Bell, X, Check, CheckCheck } from "lucide-react";
+import { Bell, X, Check, CheckCheck, BellRing, BellOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { useNotifications } from "@/hooks/useNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { formatDistanceToNow } from "date-fns";
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { 
+    isSupported, 
+    isSubscribed, 
+    isLoading: isPushLoading, 
+    permission,
+    subscribe, 
+    unsubscribe,
+    sendTestNotification 
+  } = usePushNotifications();
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -21,6 +32,14 @@ const NotificationBell = () => {
         return "bg-yellow-500";
       default:
         return "bg-gray-500";
+    }
+  };
+
+  const handlePushToggle = async () => {
+    if (isSubscribed) {
+      await unsubscribe();
+    } else {
+      await subscribe();
     }
   };
 
@@ -71,7 +90,52 @@ const NotificationBell = () => {
               </div>
             </div>
 
-            <ScrollArea className="h-80">
+            {/* Push Notification Toggle */}
+            {isSupported && (
+              <div className="p-4 border-b border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {isSubscribed ? (
+                      <BellRing className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <BellOff className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">Push Notifications</p>
+                      <p className="text-xs text-muted-foreground">
+                        {isSubscribed 
+                          ? "You'll receive alerts even when offline" 
+                          : permission === "denied" 
+                            ? "Blocked in browser settings"
+                            : "Get notified about new content"}
+                      </p>
+                    </div>
+                  </div>
+                  {isPushLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Switch
+                      checked={isSubscribed}
+                      onCheckedChange={handlePushToggle}
+                      disabled={permission === "denied"}
+                    />
+                  )}
+                </div>
+                {isSubscribed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 w-full text-xs"
+                    onClick={sendTestNotification}
+                  >
+                    <BellRing className="h-3 w-3 mr-1" />
+                    Send Test Notification
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <ScrollArea className="h-72">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <Bell className="h-10 w-10 mx-auto mb-2 opacity-50" />
