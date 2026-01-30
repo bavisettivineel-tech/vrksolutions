@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Phone, LogOut, ChevronRight, HelpCircle, Shield, Bell } from "lucide-react";
+import { User, Phone, LogOut, ChevronRight, HelpCircle, Shield, Bell, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import vrkLogo from "@/assets/vrk-logo.png";
+import PrivacyPolicyDialog from "@/components/PrivacyPolicyDialog";
+import DeleteAccountDialog from "@/components/DeleteAccountDialog";
 
 interface AccountPageProps {
   onLogout: () => void;
@@ -11,12 +16,52 @@ interface AccountPageProps {
 
 const AccountPage = ({ onLogout }: AccountPageProps) => {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const { toast } = useToast();
+  
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    setIsDeleting(true);
+    try {
+      // Delete user profile first
+      await supabase.from("profiles").delete().eq("user_id", user.id);
+      
+      // Delete user notifications
+      await supabase.from("notifications").delete().eq("user_id", user.id);
+      
+      // Delete user role
+      await supabase.from("user_roles").delete().eq("user_id", user.id);
+      
+      // Sign out the user
+      await supabase.auth.signOut();
+      
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
 
   const menuItems = [
     { icon: Bell, label: "Notifications", onClick: () => {} },
     { icon: HelpCircle, label: "Help & Support", onClick: () => {} },
-    { icon: Shield, label: "Privacy Policy", onClick: () => {} },
+    { icon: Shield, label: "Privacy Policy", onClick: () => setShowPrivacyPolicy(true) },
+    { icon: Trash2, label: "Delete Account", onClick: () => setShowDeleteDialog(true), destructive: true },
   ];
 
   const userName = profile?.name || "Student";
@@ -54,11 +99,11 @@ const AccountPage = ({ onLogout }: AccountPageProps) => {
               onClick={item.onClick}
               className={`w-full flex items-center justify-between p-4 hover:bg-vrk-50 transition-colors ${
                 index < menuItems.length - 1 ? "border-b border-border" : ""
-              }`}
+              } ${item.destructive ? "text-destructive" : ""}`}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg gradient-soft">
-                  <item.icon className="h-5 w-5 text-primary" />
+                <div className={`p-2 rounded-lg ${item.destructive ? "bg-destructive/10" : "gradient-soft"}`}>
+                  <item.icon className={`h-5 w-5 ${item.destructive ? "text-destructive" : "text-primary"}`} />
                 </div>
                 <span className="font-medium">{item.label}</span>
               </div>
@@ -81,8 +126,20 @@ const AccountPage = ({ onLogout }: AccountPageProps) => {
         <div className="text-center pt-6 animate-fade-in">
           <img src={vrkLogo} alt="VRK" className="h-12 w-12 mx-auto opacity-50" />
           <p className="text-sm text-muted-foreground mt-2">VRK Solutions v1.0.0</p>
-          <p className="text-xs text-muted-foreground mt-1">© 2024 All rights reserved</p>
+          <p className="text-xs text-muted-foreground mt-1">© 2026 All rights reserved</p>
         </div>
+
+        {/* Dialogs */}
+        <PrivacyPolicyDialog 
+          open={showPrivacyPolicy} 
+          onOpenChange={setShowPrivacyPolicy} 
+        />
+        <DeleteAccountDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirm={handleDeleteAccount}
+          isDeleting={isDeleting}
+        />
       </main>
     </div>
   );
