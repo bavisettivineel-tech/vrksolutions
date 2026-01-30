@@ -1,6 +1,7 @@
-import { Home, Grid3X3, User, LogOut } from "lucide-react";
+import { Home, Grid3X3, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import NotificationBell from "@/components/NotificationBell";
 import vrkLogo from "@/assets/vrk-logo.png";
 
 interface TopNavigationProps {
@@ -56,18 +57,19 @@ const TopNavigation = ({ userName, onLogout }: TopNavigationProps) => {
 
           {/* User section */}
           <div className="flex items-center gap-3">
+            <NotificationBell />
             {userName && (
               <span className="text-sm text-muted-foreground">
                 Welcome, <span className="font-medium text-foreground">{userName}</span>
               </span>
             )}
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="sm"
               onClick={onLogout}
-              className="text-muted-foreground hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive hover:border-destructive"
             >
-              <LogOut className="h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>

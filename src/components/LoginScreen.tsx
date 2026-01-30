@@ -4,17 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, BookOpen, GraduationCap } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import vrkLogo from "@/assets/vrk-logo.png";
 
-interface LoginScreenProps {
-  onLogin: (user: { name: string; phone: string; isAdmin: boolean }) => void;
-}
-
-const LoginScreen = ({ onLogin }: LoginScreenProps) => {
+const LoginScreen = () => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const { signInWithPhone } = useAuth();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,13 +32,21 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
 
     setIsLoading(true);
 
-    // Simulate login delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const { error: authError, isAdmin } = await signInWithPhone(name, phone);
 
-    // Check for admin credentials
-    const isAdmin = name === "vrk.@info.in" && phone === "8297458070";
+    if (authError) {
+      setError(authError.message);
+      setIsLoading(false);
+      return;
+    }
 
-    onLogin({ name, phone, isAdmin });
+    toast({
+      title: isAdmin ? "Welcome, Admin!" : "Welcome!",
+      description: isAdmin
+        ? "You have been logged in as administrator."
+        : "You have been logged in successfully.",
+    });
+
     setIsLoading(false);
   };
 

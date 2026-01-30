@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,37 +14,212 @@ import {
   Plus,
   GraduationCap,
   FileText,
+  Bell,
+  Send,
+  Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import FileUploadDialog from "@/components/FileUploadDialog";
 import vrkLogo from "@/assets/vrk-logo.png";
+import { formatDistanceToNow } from "date-fns";
 
 interface AdminPanelProps {
   onLogout: () => void;
 }
 
-type AdminView = "dashboard" | "content" | "ads" | "users" | "analytics" | "support" | "settings";
+type AdminView = "dashboard" | "content" | "ads" | "users" | "analytics" | "support" | "notifications" | "settings";
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  is_active: boolean;
+}
+
+interface ContentItem {
+  id: string;
+  title: string;
+  content_type: string;
+  file_url: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface Advertisement {
+  id: string;
+  title: string | null;
+  media_type: string;
+  media_url: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface Profile {
+  id: string;
+  name: string;
+  phone: string;
+  created_at: string;
+}
+
+interface SupportMessage {
+  id: string;
+  user_id: string;
+  message: string;
+  is_from_admin: boolean;
+  is_read: boolean;
+  created_at: string;
+  profiles?: { name: string } | null;
+}
 
 const AdminPanel = ({ onLogout }: AdminPanelProps) => {
   const [activeView, setActiveView] = useState<AdminView>("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [content, setContent] = useState<ContentItem[]>([]);
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [uploadType, setUploadType] = useState<"content" | "advertisement">("content");
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [replyMessage, setReplyMessage] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchData();
+  }, [activeView]);
+
+  const fetchData = async () => {
+    switch (activeView) {
+      case "dashboard":
+      case "content":
+        const { data: catData } = await supabase.from("categories").select("*").order("sort_order");
+        if (catData) setCategories(catData);
+        const { data: contentData } = await supabase.from("content").select("*").order("created_at", { ascending: false });
+        if (contentData) setContent(contentData);
+        break;
+      case "ads":
+        const { data: adsData } = await supabase.from("advertisements").select("*").order("sort_order");
+        if (adsData) setAdvertisements(adsData);
+        break;
+      case "users":
+        const { data: usersData } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+        if (usersData) setUsers(usersData);
+        break;
+      case "support":
+        const { data: msgData } = await supabase
+          .from("support_messages")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (msgData) {
+          // Fetch profiles separately for user names
+          const userIds = [...new Set(msgData.map(m => m.user_id))];
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("user_id, name")
+            .in("user_id", userIds);
+          
+          const messagesWithProfiles = msgData.map(msg => ({
+            ...msg,
+            profiles: profilesData?.find(p => p.user_id === msg.user_id) || null
+          }));
+          setSupportMessages(messagesWithProfiles as SupportMessage[]);
+        }
+        break;
+    }
+  };
+
+  const toggleContentStatus = async (id: string, isActive: boolean) => {
+    await supabase.from("content").update({ is_active: !isActive }).eq("id", id);
+    fetchData();
+    toast({ title: isActive ? "Content hidden" : "Content visible" });
+  };
+
+  const toggleAdStatus = async (id: string, isActive: boolean) => {
+    await supabase.from("advertisements").update({ is_active: !isActive }).eq("id", id);
+    fetchData();
+    toast({ title: isActive ? "Ad hidden" : "Ad visible" });
+  };
+
+  const deleteContent = async (id: string) => {
+    await supabase.from("content").delete().eq("id", id);
+    fetchData();
+    toast({ title: "Content deleted" });
+  };
+
+  const deleteAd = async (id: string) => {
+    await supabase.from("advertisements").delete().eq("id", id);
+    fetchData();
+    toast({ title: "Advertisement deleted" });
+  };
+
+  const sendNotification = async () => {
+    if (!notificationTitle.trim() || !notificationMessage.trim()) {
+      toast({ title: "Please fill all fields", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await supabase.from("notifications").insert({
+      title: notificationTitle,
+      message: notificationMessage,
+      type: "announcement",
+      user_id: null, // Broadcast to all
+    });
+
+    if (error) {
+      toast({ title: "Failed to send notification", variant: "destructive" });
+    } else {
+      toast({ title: "Notification sent to all users!" });
+      setNotificationTitle("");
+      setNotificationMessage("");
+    }
+  };
+
+  const sendSupportReply = async () => {
+    if (!replyMessage.trim() || !selectedUserId) return;
+
+    const { error } = await supabase.from("support_messages").insert({
+      user_id: selectedUserId,
+      message: replyMessage,
+      is_from_admin: true,
+    });
+
+    if (!error) {
+      toast({ title: "Reply sent" });
+      setReplyMessage("");
+      fetchData();
+    }
+  };
 
   const sidebarItems = [
     { id: "dashboard" as AdminView, icon: LayoutDashboard, label: "Dashboard" },
     { id: "content" as AdminView, icon: BookOpen, label: "Content Manager" },
     { id: "ads" as AdminView, icon: Image, label: "Advertisements" },
     { id: "users" as AdminView, icon: Users, label: "Users" },
-    { id: "analytics" as AdminView, icon: BarChart3, label: "Analytics" },
+    { id: "notifications" as AdminView, icon: Bell, label: "Notifications" },
     { id: "support" as AdminView, icon: MessageSquare, label: "Support Chat" },
+    { id: "analytics" as AdminView, icon: BarChart3, label: "Analytics" },
     { id: "settings" as AdminView, icon: Settings, label: "Settings" },
   ];
 
   const stats = [
-    { label: "Total Users", value: "0", change: "+0%", icon: Users },
-    { label: "Active Today", value: "0", change: "+0%", icon: BarChart3 },
-    { label: "Categories", value: "3", change: "Active", icon: BookOpen },
-    { label: "Support Tickets", value: "0", change: "Pending", icon: MessageSquare },
+    { label: "Total Users", value: users.length.toString(), icon: Users },
+    { label: "Content Items", value: content.length.toString(), icon: BookOpen },
+    { label: "Active Ads", value: advertisements.filter(a => a.is_active).length.toString(), icon: Image },
+    { label: "Support Tickets", value: supportMessages.filter(m => !m.is_read && !m.is_from_admin).length.toString(), icon: MessageSquare },
   ];
 
   const renderContent = () => {
@@ -57,7 +232,6 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
               <p className="text-muted-foreground">Welcome back, Admin!</p>
             </div>
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((stat) => (
                 <Card key={stat.label} className="p-4 border-vrk-100">
@@ -65,7 +239,6 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
                     <div>
                       <p className="text-sm text-muted-foreground">{stat.label}</p>
                       <p className="text-2xl font-display font-bold mt-1">{stat.value}</p>
-                      <p className="text-xs text-vrk-600 mt-1">{stat.change}</p>
                     </div>
                     <div className="p-2 rounded-lg gradient-soft">
                       <stat.icon className="h-5 w-5 text-primary" />
@@ -75,25 +248,38 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
               ))}
             </div>
 
-            {/* Quick Actions */}
             <Card className="p-6 border-vrk-100">
               <h3 className="font-display font-semibold text-lg mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Button
                   variant="outline"
                   className="h-auto py-4 flex-col gap-2 border-vrk-200 hover:bg-vrk-50"
-                  onClick={() => setActiveView("content")}
+                  onClick={() => {
+                    setUploadType("content");
+                    setShowUploadDialog(true);
+                  }}
                 >
                   <BookOpen className="h-6 w-6 text-primary" />
-                  <span>Add Subject</span>
+                  <span>Add Content</span>
                 </Button>
                 <Button
                   variant="outline"
                   className="h-auto py-4 flex-col gap-2 border-vrk-200 hover:bg-vrk-50"
-                  onClick={() => setActiveView("ads")}
+                  onClick={() => {
+                    setUploadType("advertisement");
+                    setShowUploadDialog(true);
+                  }}
                 >
                   <Image className="h-6 w-6 text-primary" />
                   <span>Add Ad</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex-col gap-2 border-vrk-200 hover:bg-vrk-50"
+                  onClick={() => setActiveView("notifications")}
+                >
+                  <Bell className="h-6 w-6 text-primary" />
+                  <span>Send Notification</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -102,14 +288,6 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
                 >
                   <MessageSquare className="h-6 w-6 text-primary" />
                   <span>View Messages</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col gap-2 border-vrk-200 hover:bg-vrk-50"
-                  onClick={() => setActiveView("analytics")}
-                >
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                  <span>View Reports</span>
                 </Button>
               </div>
             </Card>
@@ -124,45 +302,79 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
                 <h2 className="font-display font-bold text-2xl">Content Manager</h2>
                 <p className="text-muted-foreground">Manage educational content</p>
               </div>
-              <Button className="gradient-primary">
+              <Button
+                className="gradient-primary"
+                onClick={() => {
+                  setUploadType("content");
+                  setShowUploadDialog(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Content
               </Button>
             </div>
 
-            {/* Category tabs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { title: "10th Grade", icon: BookOpen, count: 0 },
-                { title: "Intermediate", icon: GraduationCap, count: 0 },
-                { title: "Diploma", icon: FileText, count: 0 },
-              ].map((cat) => (
-                <Card key={cat.title} className="p-6 border-vrk-100 hover:shadow-card cursor-pointer transition-all">
+              {categories.map((cat) => (
+                <Card key={cat.id} className="p-6 border-vrk-100">
                   <div className="flex items-center gap-4">
                     <div className="p-3 rounded-xl gradient-soft">
-                      <cat.icon className="h-8 w-8 text-primary" />
+                      <BookOpen className="h-8 w-8 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-display font-semibold">{cat.title}</h3>
-                      <p className="text-sm text-muted-foreground">{cat.count} subjects added</p>
+                      <h3 className="font-display font-semibold">{cat.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {content.filter(c => c.title.toLowerCase().includes(cat.slug)).length} items
+                      </p>
                     </div>
                   </div>
                 </Card>
               ))}
             </div>
 
-            {/* Empty state */}
-            <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
-              <BookOpen className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
-              <h3 className="font-display font-semibold text-lg">No Content Yet</h3>
-              <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
-                Start adding subjects, timetables, PDFs, and study materials for students.
-              </p>
-              <Button className="mt-4 gradient-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Subject
-              </Button>
-            </Card>
+            {content.length === 0 ? (
+              <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
+                <BookOpen className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
+                <h3 className="font-display font-semibold text-lg">No Content Yet</h3>
+                <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
+                  Start adding subjects, timetables, PDFs, and study materials for students.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {content.map((item) => (
+                  <Card key={item.id} className="p-4 border-vrk-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        <p className="text-sm text-muted-foreground">{item.content_type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={item.is_active ? "default" : "secondary"}>
+                        {item.is_active ? "Active" : "Hidden"}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleContentStatus(item.id, item.is_active)}
+                      >
+                        {item.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={() => deleteContent(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         );
 
@@ -174,23 +386,68 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
                 <h2 className="font-display font-bold text-2xl">Advertisement Manager</h2>
                 <p className="text-muted-foreground">Manage home screen advertisements</p>
               </div>
-              <Button className="gradient-primary">
+              <Button
+                className="gradient-primary"
+                onClick={() => {
+                  setUploadType("advertisement");
+                  setShowUploadDialog(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Advertisement
               </Button>
             </div>
 
-            <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
-              <Image className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
-              <h3 className="font-display font-semibold text-lg">No Advertisements</h3>
-              <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
-                Add image or video advertisements that will display on the student home screen.
-              </p>
-              <Button className="mt-4 gradient-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Ad
-              </Button>
-            </Card>
+            {advertisements.length === 0 ? (
+              <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
+                <Image className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
+                <h3 className="font-display font-semibold text-lg">No Advertisements</h3>
+                <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
+                  Add image or video advertisements that will display on the student home screen.
+                </p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {advertisements.map((ad) => (
+                  <Card key={ad.id} className="overflow-hidden border-vrk-100">
+                    <div className="aspect-video bg-muted">
+                      {ad.media_type === "image" ? (
+                        <img src={ad.media_url} alt={ad.title || "Ad"} className="w-full h-full object-cover" />
+                      ) : (
+                        <video src={ad.media_url} className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium truncate">{ad.title || "Untitled"}</p>
+                        <Badge variant={ad.is_active ? "default" : "secondary"}>
+                          {ad.is_active ? "Active" : "Hidden"}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => toggleAdStatus(ad.id, ad.is_active)}
+                        >
+                          {ad.is_active ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                          {ad.is_active ? "Hide" : "Show"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => deleteAd(ad.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         );
 
@@ -199,16 +456,137 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
           <div className="space-y-6">
             <div>
               <h2 className="font-display font-bold text-2xl">User Management</h2>
-              <p className="text-muted-foreground">View and manage registered students</p>
+              <p className="text-muted-foreground">View registered students ({users.length} total)</p>
             </div>
 
-            <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
-              <Users className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
-              <h3 className="font-display font-semibold text-lg">No Users Yet</h3>
-              <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
-                Registered students will appear here once they sign up.
-              </p>
+            {users.length === 0 ? (
+              <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
+                <Users className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
+                <h3 className="font-display font-semibold text-lg">No Users Yet</h3>
+                <p className="text-muted-foreground mt-2">Registered students will appear here.</p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {users.map((user) => (
+                  <Card key={user.id} className="p-4 border-vrk-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">{user.phone}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Joined {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case "notifications":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-display font-bold text-2xl">Send Notification</h2>
+              <p className="text-muted-foreground">Broadcast announcements to all students</p>
+            </div>
+
+            <Card className="p-6 border-vrk-100">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input
+                    value={notificationTitle}
+                    onChange={(e) => setNotificationTitle(e.target.value)}
+                    placeholder="Notification title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Message</label>
+                  <Textarea
+                    value={notificationMessage}
+                    onChange={(e) => setNotificationMessage(e.target.value)}
+                    placeholder="Write your message here..."
+                    rows={4}
+                  />
+                </div>
+                <Button
+                  onClick={sendNotification}
+                  disabled={!notificationTitle.trim() || !notificationMessage.trim()}
+                  className="gradient-primary"
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Send to All Students
+                </Button>
+              </div>
             </Card>
+          </div>
+        );
+
+      case "support":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-display font-bold text-2xl">Support Messages</h2>
+              <p className="text-muted-foreground">View and respond to student inquiries</p>
+            </div>
+
+            {supportMessages.length === 0 ? (
+              <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
+                <MessageSquare className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
+                <h3 className="font-display font-semibold text-lg">No Messages</h3>
+                <p className="text-muted-foreground mt-2">Student support messages will appear here.</p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {supportMessages
+                  .filter((m) => !m.is_from_admin)
+                  .map((msg) => (
+                    <Card key={msg.id} className="p-4 border-vrk-100">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
+                            {msg.profiles?.name?.charAt(0)?.toUpperCase() || "U"}
+                          </div>
+                          <div>
+                            <p className="font-medium">{msg.profiles?.name || "Unknown"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                        {!msg.is_read && (
+                          <Badge variant="secondary">New</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm mb-3">{msg.message}</p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Type your reply..."
+                          value={selectedUserId === msg.user_id ? replyMessage : ""}
+                          onChange={(e) => {
+                            setSelectedUserId(msg.user_id);
+                            setReplyMessage(e.target.value);
+                          }}
+                          onFocus={() => setSelectedUserId(msg.user_id)}
+                        />
+                        <Button
+                          onClick={sendSupportReply}
+                          disabled={selectedUserId !== msg.user_id || !replyMessage.trim()}
+                          className="gradient-primary"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            )}
           </div>
         );
 
@@ -222,36 +600,20 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="p-6 border-vrk-100">
-                <h3 className="font-display font-semibold mb-4">Most Used Categories</h3>
-                <div className="text-center py-8 text-muted-foreground">
-                  No data available yet
+                <h3 className="font-display font-semibold mb-4">User Growth</h3>
+                <div className="text-center py-8">
+                  <p className="text-4xl font-display font-bold text-primary">{users.length}</p>
+                  <p className="text-muted-foreground mt-2">Total registered users</p>
                 </div>
               </Card>
               <Card className="p-6 border-vrk-100">
-                <h3 className="font-display font-semibold mb-4">Weekly Growth</h3>
-                <div className="text-center py-8 text-muted-foreground">
-                  No data available yet
+                <h3 className="font-display font-semibold mb-4">Content Stats</h3>
+                <div className="text-center py-8">
+                  <p className="text-4xl font-display font-bold text-primary">{content.length}</p>
+                  <p className="text-muted-foreground mt-2">Total content items</p>
                 </div>
               </Card>
             </div>
-          </div>
-        );
-
-      case "support":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="font-display font-bold text-2xl">Support Messages</h2>
-              <p className="text-muted-foreground">View and respond to student inquiries</p>
-            </div>
-
-            <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
-              <MessageSquare className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
-              <h3 className="font-display font-semibold text-lg">No Messages</h3>
-              <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
-                Student support messages will appear here.
-              </p>
-            </Card>
           </div>
         );
 
@@ -265,7 +627,7 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
 
             <Card className="p-6 border-vrk-100">
               <h3 className="font-display font-semibold mb-4">Admin Settings</h3>
-              <p className="text-muted-foreground">Settings will be configured here.</p>
+              <p className="text-muted-foreground">Additional settings will be available here.</p>
             </Card>
           </div>
         );
@@ -388,6 +750,14 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8">{renderContent()}</main>
       </div>
+
+      {/* File Upload Dialog */}
+      <FileUploadDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        type={uploadType}
+        onSuccess={fetchData}
+      />
     </div>
   );
 };
