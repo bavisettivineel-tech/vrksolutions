@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { BookOpen, GraduationCap, FileText, Laptop, Target } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import AdvertisementSlider from "@/components/AdvertisementSlider";
+import ContentSearch from "@/components/ContentSearch";
 import vrkLogo from "@/assets/vrk-logo.png";
 
 interface StudentHomeProps {
@@ -88,6 +89,11 @@ const StudentHome = ({ userName }: StudentHomeProps) => {
             Hello, <span className="text-gradient">{userName}</span> 👋
           </h2>
           <p className="text-muted-foreground mt-1">Continue your learning journey</p>
+          
+          {/* Search Bar */}
+          <div className="mt-4">
+            <ContentSearch />
+          </div>
         </section>
 
         {/* Advertisement Slider */}
