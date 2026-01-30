@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, GraduationCap, FileText, Laptop, ArrowLeft } from "lucide-react";
+import { BookOpen, GraduationCap, FileText, Laptop, ArrowLeft, Target } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +30,14 @@ const CategoriesPage = () => {
       icon: FileText,
       path: "/category/diploma",
       description: "All branches and semesters",
+    },
+    {
+      id: "eapcet",
+      title: "EAPCET",
+      subtitle: "Common Entrance Test",
+      icon: Target,
+      path: "/eapcet",
+      description: "Engineering, Agriculture & Pharmacy streams",
     },
     {
       id: "btech",

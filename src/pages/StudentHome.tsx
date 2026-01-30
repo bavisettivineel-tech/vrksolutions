@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, GraduationCap, FileText, Laptop } from "lucide-react";
+import { BookOpen, GraduationCap, FileText, Laptop, Target } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import AdvertisementSlider from "@/components/AdvertisementSlider";
 import vrkLogo from "@/assets/vrk-logo.png";
@@ -50,6 +50,13 @@ const StudentHome = ({ userName }: StudentHomeProps) => {
       subtitle: "AP SBTET",
       icon: FileText,
       path: "/category/diploma",
+    },
+    {
+      id: "eapcet",
+      title: "EAPCET",
+      subtitle: "All Streams",
+      icon: Target,
+      path: "/eapcet",
     },
     {
       id: "btech",
