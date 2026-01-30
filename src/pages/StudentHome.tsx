@@ -64,10 +64,9 @@ const StudentHome = ({ userName }: StudentHomeProps) => {
     {
       id: "btech",
       title: "B-Tech",
-      subtitle: "Coming Soon",
+      subtitle: "Engineering",
       icon: Laptop,
-      disabled: true,
-      badge: "Soon",
+      path: "/category/btech",
     },
   ];
 
@@ -113,9 +112,7 @@ const StudentHome = ({ userName }: StudentHomeProps) => {
                 title={category.title}
                 subtitle={category.subtitle}
                 icon={category.icon}
-                disabled={category.disabled}
-                badge={category.badge}
-                onClick={category.path ? () => navigate(category.path) : undefined}
+                onClick={() => navigate(category.path)}
               />
             ))}
           </div>
