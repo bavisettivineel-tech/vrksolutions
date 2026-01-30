@@ -1,73 +1,169 @@
-# Welcome to your Lovable project
+# 🎓 VRK Solutions
 
-## Project info
+**First Step for Your Education**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+VRK Solutions is a fully responsive education platform designed to provide high-quality learning materials, guidance, and AI-powered assistance for students across Andhra Pradesh.
 
-## How can I edit this code?
+The platform is optimized for **mobile and desktop devices**, featuring a clean blue-and-white UI and a strictly admin-controlled content system.
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## 🚀 Project Aim
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+To provide **structured, syllabus-based education and guidance** that helps students:
+- Understand subject priorities
+- Follow proper study timetables
+- Access verified learning materials
+- Solve doubts instantly using AI
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## 📱 Platform Support
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- ✅ Mobile Responsive
+- ✅ Desktop Responsive
+- ✅ Tablet Friendly
+- ✅ Adaptive UI for all screen sizes
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🎯 Target Students
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- 10th Class (AP State Government syllabus)
+- Intermediate (Group-wise, Year-wise)
+- Diploma (AP SBTET – Year & Semester wise)
+- Polytechnic special teaching
+- EAPCET guidance (all streams)
+- B-Tech (Coming Soon)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🔐 Authentication System
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Student Access
+- Login using:
+  - Name
+  - Phone Number
+- No OTP
+- No signup flow
+- Auto user creation on first login
 
-**Edit a file directly in GitHub**
+### Admin Access
+- Admin login uses the same authentication screen
+- Role-based access handled securely via backend logic
+- Admin interface is completely separate from student interface
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+> 🔒 **Admin credentials are securely managed on the backend and are not exposed in this repository.**
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🏠 Student Features
 
-## What technologies are used for this project?
+- Home dashboard with clear navigation
+- Education categories with icons
+- Subject-wise learning materials
+- Timetables and PDF resources
+- Chapter-wise subject weightage
+- AI Education Assistant:
+  - Upload photo / camera
+  - Ask questions via text
+  - Get instant, educational answers
+- Contact Support:
+  - Direct call option
+  - Real-time chat with admin
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🤖 AI Education Assistant
 
-## How can I deploy this project?
+An integrated AI feature that enables students to:
+- Instantly resolve doubts
+- Scan questions using camera
+- Ask academic questions in text
+- Receive clear, student-friendly explanations
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+The AI assistant is focused strictly on **educational use**.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 📢 Advertisement System
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Single advertisement slider
+- Supports image and video ads
+- Clickable external links
+- Multiple slides inside one banner
+- Fully managed by admin
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+## 🧑‍💼 Admin Panel Features
+
+- Separate admin-only dashboard
+- Student Corner Management:
+  - Classes
+  - Groups
+  - Years
+  - Semesters
+  - Subjects
+  - Timetables
+  - PDFs
+  - Subject weightage
+- Advertisement Manager
+- User Analytics:
+  - Total users
+  - Daily and weekly activity
+- Service Analytics:
+  - Most accessed categories
+  - Growth insights
+- Contact Support Panel:
+  - View student messages
+  - Reply in real time
+
+---
+
+## 🎨 UI / UX Design
+
+- Blue & White professional theme
+- Minimal and distraction-free design
+- Rounded cards with soft shadows
+- Touch and mouse optimized
+- Student-first navigation experience
+
+---
+
+## 🧠 Core Principles
+
+- ❌ No dummy or fake data
+- ❌ No assumed syllabus content
+- ✅ All content managed by admin
+- ✅ Real-time updates for students
+- ✅ Secure role-based access control
+
+---
+
+## 🛠️ Technology Overview
+
+- Responsive Frontend (Mobile & Desktop)
+- Secure Backend with role-based access
+- Real-time database
+- AI-powered education assistant
+- Scalable architecture
+
+
+
+## 📞 Contact & Support
+
+**VRK Solutions**
+
+📱 Support Call: 8297458070  
+💬 Support Chat: Available inside the app
+
+---
+
+## 📄 License
+
+This project is proprietary and intended for educational services under **VRK Solutions**.
+
+---
+
+> **VRK Solutions – First Step for Your Education**
