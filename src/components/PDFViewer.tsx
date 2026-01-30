@@ -67,19 +67,34 @@ const PDFViewer = ({ open, onOpenChange, fileUrl, title }: PDFViewerProps) => {
         {/* PDF Viewer */}
         <div className="flex-1 overflow-auto bg-muted/50">
           <div 
-            className="w-full h-full flex items-center justify-center p-4"
+            className="w-full h-full flex items-center justify-center"
             style={{ minHeight: "calc(90vh - 60px)" }}
           >
-            <iframe
-              src={`${fileUrl}#zoom=${zoom}`}
-              className="w-full h-full border-0 rounded-lg shadow-lg bg-white"
+            <object
+              data={fileUrl}
+              type="application/pdf"
+              className="w-full h-full border-0 bg-white"
               style={{ 
+                minHeight: "calc(90vh - 60px)",
                 transform: `scale(${zoom / 100})`,
-                transformOrigin: "top center",
-                minHeight: "100%"
+                transformOrigin: "top center"
               }}
-              title={title}
-            />
+            >
+              {/* Fallback for browsers that don't support object tag */}
+              <embed
+                src={fileUrl}
+                type="application/pdf"
+                className="w-full h-full"
+                style={{ minHeight: "calc(90vh - 60px)" }}
+              />
+              {/* Final fallback with Google Docs Viewer */}
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
+                className="w-full h-full border-0"
+                style={{ minHeight: "calc(90vh - 60px)" }}
+                title={title}
+              />
+            </object>
           </div>
         </div>
       </DialogContent>
