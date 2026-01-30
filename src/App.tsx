@@ -10,6 +10,7 @@ import StudentHome from "@/pages/StudentHome";
 import CategoriesPage from "@/pages/CategoriesPage";
 import AccountPage from "@/pages/AccountPage";
 import CategoryDetailPage from "@/pages/CategoryDetailPage";
+import EAPCETPage from "@/pages/EAPCETPage";
 import AdminPanel from "@/pages/AdminPanel";
 import BottomNavigation from "@/components/BottomNavigation";
 import TopNavigation from "@/components/TopNavigation";
@@ -74,6 +75,7 @@ const AppContent = () => {
         <Route path="/" element={<StudentHome userName={user.name} />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/category/:categoryId" element={<CategoryDetailPage />} />
+        <Route path="/eapcet" element={<EAPCETPage />} />
         <Route path="/account" element={<AccountPage user={user} onLogout={handleLogout} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
