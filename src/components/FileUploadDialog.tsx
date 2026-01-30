@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X, FileText, Image } from "lucide-react";
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  category_id: string;
+}
+
 interface FileUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: "content" | "advertisement";
-  categoryId?: string;
-  subjectId?: string;
   onSuccess: () => void;
 }
 
@@ -22,8 +32,6 @@ const FileUploadDialog = ({
   open,
   onOpenChange,
   type,
-  categoryId,
-  subjectId,
   onSuccess,
 }: FileUploadDialogProps) => {
   const [title, setTitle] = useState("");
@@ -32,8 +40,48 @@ const FileUploadDialog = ({
   const [linkUrl, setLinkUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Fetch categories when dialog opens
+  useEffect(() => {
+    if (open && type === "content") {
+      fetchCategories();
+    }
+  }, [open, type]);
+
+  // Fetch subjects when category changes
+  useEffect(() => {
+    if (selectedCategoryId) {
+      fetchSubjects(selectedCategoryId);
+    } else {
+      setSubjects([]);
+      setSelectedSubjectId("");
+    }
+  }, [selectedCategoryId]);
+
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from("categories")
+      .select("id, name, slug")
+      .eq("is_active", true)
+      .order("sort_order");
+    if (data) setCategories(data);
+  };
+
+  const fetchSubjects = async (categoryId: string) => {
+    const { data } = await supabase
+      .from("subjects")
+      .select("id, name, category_id")
+      .eq("category_id", categoryId)
+      .eq("is_active", true)
+      .order("sort_order");
+    if (data) setSubjects(data);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -56,6 +104,15 @@ const FileUploadDialog = ({
       toast({
         title: "Missing information",
         description: "Please provide a title and select a file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === "content" && !selectedCategoryId) {
+      toast({
+        title: "Missing category",
+        description: "Please select a grade/category for this content",
         variant: "destructive",
       });
       return;
@@ -92,8 +149,8 @@ const FileUploadDialog = ({
           file_url: fileUrl,
           file_name: file.name,
           file_size: file.size,
-          category_id: categoryId,
-          subject_id: subjectId,
+          category_id: selectedCategoryId || null,
+          subject_id: selectedSubjectId || null,
         });
 
         if (insertError) throw insertError;
@@ -121,6 +178,8 @@ const FileUploadDialog = ({
       setContentType("pdf");
       setLinkUrl("");
       setFile(null);
+      setSelectedCategoryId("");
+      setSelectedSubjectId("");
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -141,6 +200,8 @@ const FileUploadDialog = ({
     setContentType("pdf");
     setLinkUrl("");
     setFile(null);
+    setSelectedCategoryId("");
+    setSelectedSubjectId("");
     onOpenChange(false);
   };
 
@@ -165,6 +226,40 @@ const FileUploadDialog = ({
 
           {type === "content" && (
             <>
+              <div className="space-y-2">
+                <Label>Grade / Category *</Label>
+                <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select grade/category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {subjects.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Subject (optional)</Label>
+                  <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Textarea
