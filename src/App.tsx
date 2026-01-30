@@ -50,28 +50,29 @@ const AppContent = () => {
     return <LoginScreen />;
   }
 
-  // Show admin panel for admin users
-  if (isAdmin) {
-    return <AdminPanel onLogout={signOut} />;
-  }
-
   const userName = profile?.name || "Student";
 
-  // Student view
+  // Both admin and student views need Router context
   return (
     <BrowserRouter>
-      <TopNavigation userName={userName} onLogout={signOut} />
-      <Routes>
-        <Route path="/" element={<StudentHome userName={userName} />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/category/:categoryId" element={<CategoryDetailPage />} />
-        <Route path="/eapcet" element={<EAPCETPage />} />
-        <Route path="/account" element={<AccountPage onLogout={signOut} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      <BottomNavigation />
-      <AIAssistantButton />
-      <ContactSupport />
+      {isAdmin ? (
+        <AdminPanel onLogout={signOut} />
+      ) : (
+        <>
+          <TopNavigation userName={userName} onLogout={signOut} />
+          <Routes>
+            <Route path="/" element={<StudentHome userName={userName} />} />
+            <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/category/:categoryId" element={<CategoryDetailPage />} />
+            <Route path="/eapcet" element={<EAPCETPage />} />
+            <Route path="/account" element={<AccountPage onLogout={signOut} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <BottomNavigation />
+          <AIAssistantButton />
+          <ContactSupport />
+        </>
+      )}
     </BrowserRouter>
   );
 };
