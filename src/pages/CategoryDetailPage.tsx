@@ -323,6 +323,7 @@ const CategoryDetailPage = () => {
           onOpenChange={setShowPDFViewer}
           fileUrl={selectedContent.file_url}
           title={selectedContent.title}
+          contentId={selectedContent.id}
         />
       )}
     </div>

@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, GraduationCap, FileText, Laptop, Target } from "lucide-react";
+import { BookOpen, GraduationCap, FileText, Laptop, Target, BookmarkCheck } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import AdvertisementSlider from "@/components/AdvertisementSlider";
 import ContentSearch from "@/components/ContentSearch";
+import { useOfflinePDFs } from "@/hooks/useOfflinePDFs";
 import vrkLogo from "@/assets/vrk-logo.png";
 
 interface StudentHomeProps {
@@ -29,6 +30,7 @@ const sampleAdvertisements = [
 
 const StudentHome = ({ userName }: StudentHomeProps) => {
   const navigate = useNavigate();
+  const { savedPDFs } = useOfflinePDFs();
 
   const categories = [
     {
@@ -118,6 +120,29 @@ const StudentHome = ({ userName }: StudentHomeProps) => {
             ))}
           </div>
         </section>
+
+        {/* Saved PDFs Quick Access */}
+        {savedPDFs.length > 0 && (
+          <section className="animate-slide-up" style={{ animationDelay: "0.25s" }}>
+            <div 
+              className="p-4 rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 cursor-pointer hover:shadow-card transition-all"
+              onClick={() => navigate("/saved-pdfs")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-800">
+                  <BookmarkCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-green-800 dark:text-green-300">Saved PDFs</h4>
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    {savedPDFs.length} PDF{savedPDFs.length !== 1 ? "s" : ""} available offline
+                  </p>
+                </div>
+                <span className="text-sm text-green-600 dark:text-green-400">View →</span>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Quick Stats */}
         <section className="animate-slide-up" style={{ animationDelay: "0.3s" }}>

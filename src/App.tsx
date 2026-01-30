@@ -10,6 +10,7 @@ import StudentHome from "@/pages/StudentHome";
 import CategoriesPage from "@/pages/CategoriesPage";
 import AccountPage from "@/pages/AccountPage";
 import CategoryDetailPage from "@/pages/CategoryDetailPage";
+import SavedPDFsPage from "@/pages/SavedPDFsPage";
 import EAPCETPage from "@/pages/EAPCETPage";
 import AdminPanel from "@/pages/AdminPanel";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -64,6 +65,7 @@ const AppContent = () => {
             <Route path="/" element={<StudentHome userName={userName} />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/category/:categoryId" element={<CategoryDetailPage />} />
+            <Route path="/saved-pdfs" element={<SavedPDFsPage />} />
             <Route path="/eapcet" element={<EAPCETPage />} />
             <Route path="/account" element={<AccountPage onLogout={signOut} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
