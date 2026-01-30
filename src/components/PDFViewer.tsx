@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { X, Download, ExternalLink, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { X, Download, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface PDFViewerProps {
   open: boolean;
@@ -11,11 +12,7 @@ interface PDFViewerProps {
 }
 
 const PDFViewer = ({ open, onOpenChange, fileUrl, title }: PDFViewerProps) => {
-  const [zoom, setZoom] = useState(100);
-
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 25, 200));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 25, 50));
-  const handleResetZoom = () => setZoom(100);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleDownload = () => {
     window.open(fileUrl, "_blank");
@@ -25,9 +22,19 @@ const PDFViewer = ({ open, onOpenChange, fileUrl, title }: PDFViewerProps) => {
     window.open(fileUrl, "_blank");
   };
 
+  // Use Google Docs Viewer for reliable PDF display
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 gap-0">
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 gap-0" aria-describedby="pdf-dialog-description">
+        <VisuallyHidden>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription id="pdf-dialog-description">
+            PDF document viewer for {title}
+          </DialogDescription>
+        </VisuallyHidden>
+        
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
           <div className="flex-1 min-w-0">
@@ -35,20 +42,6 @@ const PDFViewer = ({ open, onOpenChange, fileUrl, title }: PDFViewerProps) => {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Zoom controls */}
-            <div className="hidden sm:flex items-center gap-1 mr-2">
-              <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 50}>
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-sm w-12 text-center">{zoom}%</span>
-              <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 200}>
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleResetZoom}>
-                <RotateCw className="h-4 w-4" />
-              </Button>
-            </div>
-
             {/* Action buttons */}
             <Button variant="outline" size="sm" onClick={handleOpenExternal}>
               <ExternalLink className="h-4 w-4 mr-1" />
@@ -65,37 +58,22 @@ const PDFViewer = ({ open, onOpenChange, fileUrl, title }: PDFViewerProps) => {
         </div>
 
         {/* PDF Viewer */}
-        <div className="flex-1 overflow-auto bg-muted/50">
-          <div 
-            className="w-full h-full flex items-center justify-center"
+        <div className="flex-1 relative bg-muted/50">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading PDF...</p>
+              </div>
+            </div>
+          )}
+          <iframe
+            src={googleViewerUrl}
+            className="w-full h-full border-0"
             style={{ minHeight: "calc(90vh - 60px)" }}
-          >
-            <object
-              data={fileUrl}
-              type="application/pdf"
-              className="w-full h-full border-0 bg-white"
-              style={{ 
-                minHeight: "calc(90vh - 60px)",
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "top center"
-              }}
-            >
-              {/* Fallback for browsers that don't support object tag */}
-              <embed
-                src={fileUrl}
-                type="application/pdf"
-                className="w-full h-full"
-                style={{ minHeight: "calc(90vh - 60px)" }}
-              />
-              {/* Final fallback with Google Docs Viewer */}
-              <iframe
-                src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
-                className="w-full h-full border-0"
-                style={{ minHeight: "calc(90vh - 60px)" }}
-                title={title}
-              />
-            </object>
-          </div>
+            title={title}
+            onLoad={() => setIsLoading(false)}
+          />
         </div>
       </DialogContent>
     </Dialog>
