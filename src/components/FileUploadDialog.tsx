@@ -28,6 +28,30 @@ interface FileUploadDialogProps {
   onSuccess: () => void;
 }
 
+// Year and semester configurations for different categories
+const categoryConfigs: Record<string, { years: string[]; semesters?: Record<string, string[]> }> = {
+  intermediate: {
+    years: ["1st Year", "2nd Year"],
+  },
+  diploma: {
+    years: ["1st Year", "2nd Year", "3rd Year"],
+    semesters: {
+      "1st Year": ["Semester 1", "Semester 2"],
+      "2nd Year": ["Semester 3", "Semester 4"],
+      "3rd Year": ["Semester 5", "Semester 6"],
+    },
+  },
+  btech: {
+    years: ["1st Year", "2nd Year", "3rd Year", "4th Year"],
+    semesters: {
+      "1st Year": ["Semester 1", "Semester 2"],
+      "2nd Year": ["Semester 3", "Semester 4"],
+      "3rd Year": ["Semester 5", "Semester 6"],
+      "4th Year": ["Semester 7", "Semester 8"],
+    },
+  },
+};
+
 const FileUploadDialog = ({
   open,
   onOpenChange,
@@ -44,8 +68,20 @@ const FileUploadDialog = ({
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedSemester, setSelectedSemester] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Get the selected category's slug
+  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+  const categorySlug = selectedCategory?.slug || "";
+  const config = categoryConfigs[categorySlug];
+  const hasYearFilter = !!config;
+  const hasSemesterFilter = !!(config?.semesters && selectedYear);
+  const availableSemesters = hasSemesterFilter && selectedYear 
+    ? config?.semesters?.[selectedYear] || [] 
+    : [];
 
   // Fetch categories when dialog opens
   useEffect(() => {
@@ -62,7 +98,15 @@ const FileUploadDialog = ({
       setSubjects([]);
       setSelectedSubjectId("");
     }
+    // Reset year and semester when category changes
+    setSelectedYear("");
+    setSelectedSemester("");
   }, [selectedCategoryId]);
+
+  // Reset semester when year changes
+  useEffect(() => {
+    setSelectedSemester("");
+  }, [selectedYear]);
 
   const fetchCategories = async () => {
     const { data } = await supabase
@@ -141,6 +185,11 @@ const FileUploadDialog = ({
       const fileUrl = urlData.publicUrl;
 
       if (type === "content") {
+        // Build metadata with year and semester
+        const metadata: Record<string, string> = {};
+        if (selectedYear) metadata.year = selectedYear;
+        if (selectedSemester) metadata.semester = selectedSemester;
+
         // Insert content record
         const { error: insertError } = await supabase.from("content").insert({
           title,
@@ -151,6 +200,7 @@ const FileUploadDialog = ({
           file_size: file.size,
           category_id: selectedCategoryId || null,
           subject_id: selectedSubjectId || null,
+          metadata: Object.keys(metadata).length > 0 ? metadata : null,
         });
 
         if (insertError) throw insertError;
@@ -180,6 +230,8 @@ const FileUploadDialog = ({
       setFile(null);
       setSelectedCategoryId("");
       setSelectedSubjectId("");
+      setSelectedYear("");
+      setSelectedSemester("");
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -202,12 +254,14 @@ const FileUploadDialog = ({
     setFile(null);
     setSelectedCategoryId("");
     setSelectedSubjectId("");
+    setSelectedYear("");
+    setSelectedSemester("");
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display">
             {type === "content" ? "Upload Content" : "Add Advertisement"}
@@ -241,6 +295,44 @@ const FileUploadDialog = ({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Year Selection for Intermediate, Diploma, B-Tech */}
+              {hasYearFilter && (
+                <div className="space-y-2">
+                  <Label>Year</Label>
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {config?.years.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Semester Selection for Diploma, B-Tech */}
+              {hasSemesterFilter && availableSemesters.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Semester</Label>
+                  <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSemesters.map((sem) => (
+                        <SelectItem key={sem} value={sem}>
+                          {sem}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {subjects.length > 0 && (
                 <div className="space-y-2">
