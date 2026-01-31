@@ -172,6 +172,7 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
       return;
     }
 
+    // Save to in-app notifications
     const { error } = await supabase.from("notifications").insert({
       title: notificationTitle,
       message: notificationMessage,
@@ -181,11 +182,45 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
 
     if (error) {
       toast({ title: "Failed to send notification", variant: "destructive" });
-    } else {
-      toast({ title: "Notification sent to all users!" });
-      setNotificationTitle("");
-      setNotificationMessage("");
+      return;
     }
+
+    // Also send push notifications to all subscribed users
+    try {
+      const pushResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/push-notifications`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            action: "send",
+            title: notificationTitle,
+            body: notificationMessage,
+            icon: "/favicon.ico",
+            url: "/",
+          }),
+        }
+      );
+
+      const pushResult = await pushResponse.json();
+      
+      if (pushResult.sent > 0) {
+        toast({ 
+          title: `Notification sent to all users! Push notifications sent to ${pushResult.sent} device(s).` 
+        });
+      } else {
+        toast({ title: "Notification sent to all users!" });
+      }
+    } catch (pushError) {
+      console.error("Push notification error:", pushError);
+      toast({ title: "Notification sent! (Push may have failed)" });
+    }
+
+    setNotificationTitle("");
+    setNotificationMessage("");
   };
 
   const sendSupportReply = async () => {
