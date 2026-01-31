@@ -1,36 +1,53 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { BookOpen, GraduationCap, FileText, Laptop, Target, BookmarkCheck } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import AdvertisementSlider from "@/components/AdvertisementSlider";
 import ContentSearch from "@/components/ContentSearch";
 import { useOfflinePDFs } from "@/hooks/useOfflinePDFs";
+import { supabase } from "@/integrations/supabase/client";
 import vrkLogo from "@/assets/vrk-logo.png";
 
 interface StudentHomeProps {
   userName: string;
 }
 
-// Placeholder advertisements - will be managed by admin
-const sampleAdvertisements = [
-  {
-    id: "1",
-    type: "image" as const,
-    url: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&h=400&fit=crop",
-    title: "Admissions Open for 2024-25",
-    link: "#",
-  },
-  {
-    id: "2",
-    type: "image" as const,
-    url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=1200&h=400&fit=crop",
-    title: "EAPCET Coaching Classes Starting Soon",
-    link: "#",
-  },
-];
+interface Advertisement {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  link?: string;
+  title?: string;
+}
 
 const StudentHome = ({ userName }: StudentHomeProps) => {
   const navigate = useNavigate();
   const { savedPDFs } = useOfflinePDFs();
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+
+  // Fetch advertisements from database
+  useEffect(() => {
+    const fetchAdvertisements = async () => {
+      const { data, error } = await supabase
+        .from("advertisements")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      
+      if (data && !error) {
+        const formattedAds: Advertisement[] = data.map((ad) => ({
+          id: ad.id,
+          type: ad.media_type as "image" | "video",
+          url: ad.media_url,
+          link: ad.link_url || undefined,
+          title: ad.title || undefined,
+        }));
+        setAdvertisements(formattedAds);
+      }
+    };
+
+    fetchAdvertisements();
+  }, []);
 
   const categories = [
     {
@@ -97,10 +114,12 @@ const StudentHome = ({ userName }: StudentHomeProps) => {
           </div>
         </section>
 
-        {/* Advertisement Slider */}
-        <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <AdvertisementSlider advertisements={sampleAdvertisements} />
-        </section>
+        {/* Advertisement Slider - Only show if there are admin-added ads */}
+        {advertisements.length > 0 && (
+          <section className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <AdvertisementSlider advertisements={advertisements} />
+          </section>
+        )}
 
         {/* Education Categories */}
         <section className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
