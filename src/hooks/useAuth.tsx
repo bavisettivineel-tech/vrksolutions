@@ -2,12 +2,16 @@ import { useState, useEffect, createContext, useContext, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-interface Profile {
+export interface Profile {
   id: string;
   user_id: string;
   name: string;
   phone: string;
   avatar_url: string | null;
+  standard: string | null;           // '10th' | 'intermediate' | 'diploma' | 'btech'
+  academic_group: string | null;     // 'MPC' | 'BiPC' | 'CME'
+  year_or_semester: string | null;   // '1st Year' | '2nd Year' | '1-1' | '1-2' etc.
+  onboarding_complete: boolean;
 }
 
 interface AuthContextType {
@@ -21,6 +25,12 @@ interface AuthContextType {
   signInWithPhone: (name: string, phone: string) => Promise<{ error: Error | null; isAdmin: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateAcademicProfile: (data: {
+    standard: string;
+    academic_group: string | null;
+    year_or_semester: string | null;
+    onboarding_complete: boolean;
+  }) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,7 +50,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .single();
 
     if (profileData) {
-      setProfile(profileData as Profile);
+      setProfile({
+        id: profileData.id,
+        user_id: profileData.user_id,
+        name: profileData.name,
+        phone: profileData.phone,
+        avatar_url: profileData.avatar_url ?? null,
+        standard: (profileData as any).standard ?? null,
+        academic_group: (profileData as any).academic_group ?? null,
+        year_or_semester: (profileData as any).year_or_semester ?? null,
+        onboarding_complete: (profileData as any).onboarding_complete ?? false,
+      });
     }
 
     // Check if user is admin
@@ -168,6 +188,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateAcademicProfile = async (data: {
+    standard: string;
+    academic_group: string | null;
+    year_or_semester: string | null;
+    onboarding_complete: boolean;
+  }) => {
+    if (!user) return { error: new Error("Not authenticated") };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        standard: data.standard,
+        academic_group: data.academic_group,
+        year_or_semester: data.year_or_semester,
+        onboarding_complete: data.onboarding_complete,
+      } as any)
+      .eq("user_id", user.id);
+
+    if (!error) {
+      await fetchProfile(user.id);
+    }
+
+    return { error: error as unknown as Error | null };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -181,6 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signInWithPhone,
         signOut,
         refreshProfile,
+        updateAcademicProfile,
       }}
     >
       {children}

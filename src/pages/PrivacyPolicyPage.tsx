@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Shield, Mail, Phone, Clock, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Shield, Mail, Phone, Clock, FileText, CheckCircle2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import vrkLogo from "@/assets/vrk-logo.png";
@@ -13,14 +13,15 @@ const PrivacyPolicyPage = () => {
     { id: "introduction", label: "Introduction" },
     { id: "collect", label: "1. Information We Collect" },
     { id: "use", label: "2. How We Use Information" },
-    { id: "legal-basis", label: "3. Legal Basis for GDPR" },
-    { id: "security", label: "4. Security & Encryption" },
+    { id: "ai-processing", label: "3. AI Processing & Privacy" },
+    { id: "security", label: "4. Security & Data Minimization" },
     { id: "retention", label: "5. Data Retention & Purging" },
-    { id: "rights", label: "6. Your Privacy Rights" },
-    { id: "account-deletion", label: "7. Account Deletion" },
-    { id: "california", label: "8. CCPA/CPRA California Rights" },
-    { id: "children", label: "9. Children's Privacy" },
-    { id: "contact", label: "10. Contact Information" },
+    { id: "dpdpa", label: "6. Indian DPDP Act Rights" },
+    { id: "gdpr", label: "7. GDPR Privacy Rights" },
+    { id: "ccpa", label: "8. CCPA/CPRA California Rights" },
+    { id: "account-deletion", label: "9. Account Deletion Workflow" },
+    { id: "children", label: "10. Children's Privacy" },
+    { id: "contact", label: "11. Contact & Grievance Officer" },
   ];
 
   const scrollToSection = (id: string) => {
@@ -59,7 +60,7 @@ const PrivacyPolicyPage = () => {
             <img src={vrkLogo} alt="VRK Solutions Logo" className="h-8 w-8 object-contain" />
             <span className="font-display font-bold text-sm tracking-wide text-gradient">VRK SOLUTIONS</span>
           </div>
-          <div className="w-16" /> {/* Spacer to center the logo on desktop */}
+          <div className="w-16" />
         </div>
       </header>
 
@@ -111,10 +112,10 @@ const PrivacyPolicyPage = () => {
                   Introduction
                 </h2>
                 <p>
-                  Welcome to VRK Solutions. We are committed to protecting your privacy and ensuring your personal information is handled in a safe, transparent, and responsible manner. This Privacy Policy details how we collect, use, share, and protect your information when you use our mobile application and web services.
+                  Welcome to VRK Solutions. We are committed to protecting your privacy and ensuring your personal information is handled in a safe, transparent, and legally compliant manner. This Privacy Policy details how we collect, use, process, and safeguard your data when you use our educational applications, materials, AI assistants, and websites.
                 </p>
                 <p>
-                  By accessing or using our services, you agree to the collection and use of information in accordance with this policy. If you do not agree with any terms in this policy, please do not use our services.
+                  By accessing or using our services, you consent to the collection and use of your information in accordance with this policy. We align our data collection and processing methodologies with local and international guidelines, including India's Digital Personal Data Protection (DPDP) Act 2023, the European Union's GDPR, and the California CCPA/CPRA.
                 </p>
               </div>
 
@@ -125,35 +126,35 @@ const PrivacyPolicyPage = () => {
                   <span className="h-2 w-2 rounded-full bg-primary" />
                   1. Information We Collect
                 </h2>
-                <p>We collect several types of information to provide and improve our educational services to you:</p>
+                <p>We collect only the minimum necessary information required to provide and personalize our educational services:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                   <div className="p-4 rounded-xl border border-border bg-muted/30">
                     <h3 className="font-semibold text-foreground mb-1 text-xs flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
-                      Account & Identity
+                      Account Credentials
                     </h3>
-                    <p className="text-xs">Full Name and 10-digit Phone Number during registration. We use these for profile creation and authentication via secure credentials.</p>
+                    <p className="text-xs">Your full name and 10-digit phone number. These serve as unique identifiers to authorize and secure your student profile.</p>
                   </div>
                   <div className="p-4 rounded-xl border border-border bg-muted/30">
                     <h3 className="font-semibold text-foreground mb-1 text-xs flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
-                      Learning & Activity Data
+                      Academic Preferences
                     </h3>
-                    <p className="text-xs">Your chosen academic categories (e.g. 10th Grade, Intermediate, EAPCET), course selections, subject activity, progress history, and saved PDFs.</p>
+                    <p className="text-xs">Your academic category (e.g., 10th Grade, Intermediate, Diploma, B-Tech), group details (e.g., MPC, BiPC, CME), and year/semester configuration.</p>
                   </div>
                   <div className="p-4 rounded-xl border border-border bg-muted/30">
                     <h3 className="font-semibold text-foreground mb-1 text-xs flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
-                      Interactions & AI Notes
+                      Learning & Activity Logs
                     </h3>
-                    <p className="text-xs">Notes you create and your prompt history with our integrated AI Assistant. Prompts are processed anonymously to protect your personal identity.</p>
+                    <p className="text-xs">Syllabus weightages, bookmarks, exam details, and history of saved study PDFs or documents.</p>
                   </div>
                   <div className="p-4 rounded-xl border border-border bg-muted/30">
                     <h3 className="font-semibold text-foreground mb-1 text-xs flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
-                      Support Messages
+                      AI Chat & Notes History
                     </h3>
-                    <p className="text-xs">Messages, questions, and support requests you submit to our support staff. We store these to help resolve queries quickly and effectively.</p>
+                    <p className="text-xs">Generated notes and prompt interactions with our AI assistant. All prompts are processed securely and independently of your user credentials.</p>
                   </div>
                 </div>
               </div>
@@ -163,32 +164,31 @@ const PrivacyPolicyPage = () => {
               <div id="use" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  2. How We Use Your Information
+                  2. How We Use Information
                 </h2>
-                <p>VRK Solutions uses the collected data for various purposes, including:</p>
+                <p>VRK Solutions uses the collected data solely for the following educational purposes:</p>
                 <ul className="list-disc ml-6 space-y-2 text-xs">
-                  <li><strong>Provide & Maintain Services:</strong> To authenticate your logins, present curated study content, and manage your student profile.</li>
-                  <li><strong>Personalization:</strong> To tailor subject weightage and study materials according to your classes and choices.</li>
-                  <li><strong>AI Processing:</strong> To generate relevant learning notes and study support via the AI Assistant.</li>
-                  <li><strong>Communication:</strong> To send important notifications, academic updates, and support answers.</li>
-                  <li><strong>Improvement:</strong> To monitor system performance, fix bugs, and refine our interface to enhance your educational experience.</li>
+                  <li><strong>Identity Authentication:</strong> Validating logins and profiles securely using Supabase Auth.</li>
+                  <li><strong>Customized Syllabus Delivery:</strong> Presenting subject weightage, learning categories, and recommended study notes based on your active standard.</li>
+                  <li><strong>AI-Assisted Learning:</strong> Resolving academic queries and formatting custom revision sheets through the AI Assistant.</li>
+                  <li><strong>Support & Compliance:</strong> Managing support queries, maintaining legal records of deletion requests, and ensuring app security.</li>
                 </ul>
               </div>
 
               <hr className="my-8 border-border" />
 
-              <div id="legal-basis" className="space-y-4 scroll-mt-24">
+              <div id="ai-processing" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  3. Legal Basis for GDPR Processing
+                  3. AI Processing & Privacy
                 </h2>
                 <p>
-                  For users inside the European Economic Area (EEA), our legal basis for collecting and using the personal data described in this Privacy Policy depends on the personal data we collect and the specific context in which we collect it:
+                  Our services feature an integrated AI Assistant. We implement strict privacy controls to isolate and protect your prompts:
                 </p>
                 <ul className="list-disc ml-6 space-y-2 text-xs">
-                  <li><strong>Consent:</strong> You have given us explicit permission to process your data (e.g. for push notifications or support tickets).</li>
-                  <li><strong>Contract:</strong> The processing is necessary for the performance of our contract/services with you.</li>
-                  <li><strong>Legitimate Interests:</strong> To improve our service offerings, prevent unauthorized access, and compile aggregated usage statistics.</li>
+                  <li><strong>Anonymization:</strong> Prompts submitted to our LLM processors are stripped of metadata, full names, or phone numbers.</li>
+                  <li><strong>No Model Training:</strong> Your academic prompt history and study transcripts are not shared or sold to build public models or public databases.</li>
+                  <li><strong>User Boundary:</strong> Generated notes remain mapped to your secure profile and are fully erasable by you at any time.</li>
                 </ul>
               </div>
 
@@ -197,13 +197,13 @@ const PrivacyPolicyPage = () => {
               <div id="security" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  4. Security & Encryption
+                  4. Security & Data Minimization
                 </h2>
                 <p>
-                  We prioritize data security and utilize high-level protections to keep your data safe.
+                  We adhere strictly to the principle of **Data Minimization**. We collect only what is essential for the functionality of our educational portal.
                 </p>
                 <p>
-                  All data is transmitted securely using <strong>SSL/TLS encryption protocols</strong>. Your user sessions and credentials are managed directly by Supabase’s secure identity systems. We do not sell, trade, lease, or distribute your personal details or contact credentials to any third-party marketing companies.
+                  All database and authentication transactions are routed through encrypted SSL/TLS layers. In addition, we explicitly commit to a **Zero-Monetization Policy**: we never lease, share, or sell user contact credentials, learning patterns, or phone records to advertising corporations.
                 </p>
               </div>
 
@@ -215,26 +215,63 @@ const PrivacyPolicyPage = () => {
                   5. Data Retention & Purging
                 </h2>
                 <p>
-                  We retain your personal information only for as long as necessary to fulfill the purposes outlined in this Privacy Policy.
+                  We retain personal information only for the duration that your account remains active:
                 </p>
                 <p>
-                  Account records remain active as long as you use our services. If your account remains completely inactive for a continuous period of <strong>24 months</strong>, we will notify you and subsequently purge your account, profiles, roles, and related logs from our active databases.
+                  <strong>Automatic Inactivity Purging:</strong> If an account is completely inactive for a continuous period of <strong>24 months</strong>, we will designate it as dormant. After sending a prior warning notice to the registered number, we will permanently purge the account, user roles, profile settings, AI records, and log entries from our database.
                 </p>
               </div>
 
               <hr className="my-8 border-border" />
 
-              <div id="rights" className="space-y-4 scroll-mt-24">
+              <div id="dpdpa" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  6. Your Privacy Rights
+                  6. Indian DPDP Act, 2023 Compliance
                 </h2>
-                <p>Depending on your location, you have certain statutory privacy rights, which include:</p>
+                <p>
+                  Since VRK Solutions operates in India and serves student boards in Andhra Pradesh and Telangana, we strictly align with the <strong>Digital Personal Data Protection (DPDP) Act, 2023</strong>:
+                </p>
                 <ul className="list-disc ml-6 space-y-2 text-xs">
-                  <li><strong>The Right to Access:</strong> You can request copy summaries of your data.</li>
-                  <li><strong>The Right to Rectification:</strong> You can edit inaccurate details in your profile settings.</li>
-                  <li><strong>The Right to Data Portability:</strong> You can request a download of your saved data files.</li>
-                  <li><strong>The Right to Erasure (Deletion):</strong> You have the right to request that we erase your personal information.</li>
+                  <li><strong>Notice & Consent:</strong> We seek clear, specific, unconditional, and revocable consent during signup.</li>
+                  <li><strong>Right to Correction & Erasure:</strong> You can edit profile parameters or request complete deletion of your data at any time.</li>
+                  <li><strong>Grievance Redressal:</strong> Any complaints or inquiries regarding data processing can be directly addressed to our designated Grievance Officer (see Section 11).</li>
+                  <li><strong>Right to Nominate:</strong> You have the right to nominate another individual to exercise your rights in the event of death or incapacity.</li>
+                </ul>
+              </div>
+
+              <hr className="my-8 border-border" />
+
+              <div id="gdpr" className="space-y-4 scroll-mt-24">
+                <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  7. GDPR Privacy Rights
+                </h2>
+                <p>
+                  For users accessing the app from the European Economic Area (EEA), we process personal data under the following GDPR legal bases: consent, contract fulfillment, and legitimate educational interest. Your rights include:
+                </p>
+                <ul className="list-disc ml-6 space-y-2 text-xs">
+                  <li><strong>Right of Access & Portability:</strong> Obtain a digital breakdown of the profile data stored in our cloud.</li>
+                  <li><strong>Right to Erasure ("Right to be Forgotten"):</strong> Instantly wipe your database records.</li>
+                  <li><strong>Right to Restrict or Object:</strong> Restrict automated processing or object to notification dispatch.</li>
+                </ul>
+              </div>
+
+              <hr className="my-8 border-border" />
+
+              <div id="ccpa" className="space-y-4 scroll-mt-24">
+                <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  8. CCPA/CPRA California Rights
+                </h2>
+                <p>
+                  Under the California Consumer Privacy Act (CCPA) and CPRA, California residents possess the following rights:
+                </p>
+                <ul className="list-disc ml-6 space-y-2 text-xs">
+                  <li><strong>Right to Know & Access:</strong> Access categories of personal information collected.</li>
+                  <li><strong>Do Not Sell or Share:</strong> We do not engage in the sale or sharing of student data.</li>
+                  <li><strong>Right to Limit:</strong> We limit phone number processing purely to critical session logging.</li>
+                  <li><strong>Non-Discrimination:</strong> We guarantee equal app features and service quality for all students exercising privacy rights.</li>
                 </ul>
               </div>
 
@@ -243,23 +280,21 @@ const PrivacyPolicyPage = () => {
               <div id="account-deletion" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  7. Account Deletion
+                  9. Account Deletion Workflow
                 </h2>
                 <p>
-                  We make it simple for you to delete your account and remove all data completely at any time:
+                  We believe that users own their personal data. We provide two separate methods to permanently delete your account and erase all associated logs:
                 </p>
-                <p>
-                  <strong>Within the App:</strong> Authenticated users can navigate to the Account Settings page and click the "Delete Account" button. After quick confirmation, your account and all records (profiles, roles, notifications, support records, and AI notes) are immediately deleted in real time.
-                </p>
-                <p>
-                  <strong>Web Deletion Link:</strong> If you no longer have access to the app, you can delete your account directly using our dedicated public page at:
-                </p>
-                <div className="p-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <ul className="list-disc ml-6 space-y-2 text-xs">
+                  <li><strong>Direct Self-Serve (LoggedIn):</strong> Navigate to settings and click the "Delete Account" button. Confirm by entering your phone number. Your account, credentials, profiles, support logs, and notes will be deleted immediately in real-time.</li>
+                  <li><strong>Web Request (LoggedOut):</strong> If you cannot access the app or wish to request deletion offline, you can use our public request section at `/delete-account`. Our support team will confirm your ownership and wipe the records within 48 hours.</li>
+                </ul>
+                <div className="p-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-primary" />
                     <div>
                       <h4 className="font-semibold text-foreground text-xs">Dedicated Account Deletion Page</h4>
-                      <p className="text-xs text-muted-foreground">Self-serve deletion or offline manual requests.</p>
+                      <p className="text-xs text-muted-foreground">Submit self-serve or manual unauthenticated deletion requests.</p>
                     </div>
                   </div>
                   <Button size="sm" className="gradient-primary" onClick={() => navigate("/delete-account")}>
@@ -270,30 +305,13 @@ const PrivacyPolicyPage = () => {
 
               <hr className="my-8 border-border" />
 
-              <div id="california" className="space-y-4 scroll-mt-24">
-                <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  8. CCPA/CPRA California Rights
-                </h2>
-                <p>
-                  If you are a California resident, the California Consumer Privacy Act (CCPA), as amended by the CPRA, grants you specific rights regarding your personal information:
-                </p>
-                <ul className="list-disc ml-6 space-y-2 text-xs">
-                  <li><strong>No Sale or Share:</strong> We do NOT sell or share your personal information.</li>
-                  <li><strong>Right to Limit Use:</strong> We restrict the use of your phone numbers solely to secure profile authentication.</li>
-                  <li><strong>Non-Discrimination:</strong> You will not receive discriminatory treatment from us for exercising any of your privacy rights.</li>
-                </ul>
-              </div>
-
-              <hr className="my-8 border-border" />
-
               <div id="children" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  9. Children's Privacy
+                  10. Children's Privacy
                 </h2>
                 <p>
-                  Our services are designed for students of all ages. We are committed to protecting the privacy of minors. If you are under 13 years old, parental consent is advised. We comply with all applicable children's privacy protection regulations and do not collect data beyond essential credentials.
+                  We serve academic content and exam guides to students of all ages. Under India's DPDP Act 2023, data processing of minors under 18 years of age requires parental or guardian consent. We encourage parents and guardians to monitor their children's online study habits. We do not track children's general web history or target advertisements to minors.
                 </p>
               </div>
 
@@ -302,16 +320,16 @@ const PrivacyPolicyPage = () => {
               <div id="contact" className="space-y-4 scroll-mt-24">
                 <h2 className="font-display font-bold text-xl text-foreground flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  10. Contact Information
+                  11. Contact & Grievance Officer
                 </h2>
                 <p>
-                  If you have any questions, feedback, or compliance concerns regarding this Privacy Policy, or if you need assistance in exercising your rights, please reach out to us:
+                  If you have compliance inquiries, or wish to revoke consent, please contact our support desk or reach out directly to our Grievance Officer:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                   <Card className="p-4 border-border bg-muted/10 flex items-start gap-3">
                     <Mail className="h-5 w-5 text-primary mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-foreground text-xs">Email Support</h4>
+                      <h4 className="font-semibold text-foreground text-xs">Support Email</h4>
                       <p className="text-xs text-muted-foreground mt-1">support@vrk-solutions.app</p>
                     </div>
                   </Card>
@@ -322,6 +340,19 @@ const PrivacyPolicyPage = () => {
                       <p className="text-xs text-muted-foreground mt-1">+91 8297458070</p>
                     </div>
                   </Card>
+                </div>
+
+                <div className="p-4 rounded-xl border border-border bg-primary/5 mt-4">
+                  <h3 className="font-semibold text-foreground text-sm flex items-center gap-2 mb-2">
+                    <UserCheck className="h-4 w-4 text-primary" />
+                    Designated Grievance Officer (DPDPA 2023)
+                  </h3>
+                  <div className="text-xs space-y-1 text-muted-foreground">
+                    <p><strong className="text-foreground">Name:</strong> Mr. Vineel Bavisetti</p>
+                    <p><strong className="text-foreground">Designation:</strong> Data Protection & Grievance Officer</p>
+                    <p><strong className="text-foreground">Email:</strong> grievance@vrk-solutions.app</p>
+                    <p><strong className="text-foreground">Address:</strong> VRK Solutions, Visakhapatnam, Andhra Pradesh, India</p>
+                  </div>
                 </div>
               </div>
 

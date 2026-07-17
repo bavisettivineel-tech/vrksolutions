@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import PDFViewer from "@/components/PDFViewer";
 
 interface Category {
@@ -41,39 +42,33 @@ interface ContentItem {
   subject_id: string | null;
 }
 
-// Year and semester configurations for different categories
-const categoryConfigs: Record<string, { years: string[]; semesters?: Record<string, string[]>; hasBranches?: boolean; branches?: string[] }> = {
-  intermediate: {
-    years: ["1st Year", "2nd Year"],
-    hasBranches: true,
-    branches: ["MPC", "BiPC", "CEC", "HEC"],
-  },
-  diploma: {
-    years: ["1st Year", "2nd Year", "3rd Year"],
-    semesters: {
-      "1st Year": ["Semester 1", "Semester 2"],
-      "2nd Year": ["Semester 3", "Semester 4"],
-      "3rd Year": ["Semester 5", "Semester 6"],
-    },
-    hasBranches: true,
-    branches: ["ECE", "EEE", "CSE", "Mechanical", "Civil", "Mining"],
-  },
-  btech: {
-    years: ["1st Year", "2nd Year", "3rd Year", "4th Year"],
-    semesters: {
-      "1st Year": ["Semester 1", "Semester 2"],
-      "2nd Year": ["Semester 3", "Semester 4"],
-      "3rd Year": ["Semester 5", "Semester 6"],
-      "4th Year": ["Semester 7", "Semester 8"],
-    },
-    hasBranches: true,
-    branches: ["CSE", "ECE", "EEE", "Mechanical", "Civil", "IT", "AI/ML"],
-  },
+// Semester options per category slug — values must match what is stored in subjects.semester column
+const SEMESTER_VALUES: Record<string, string[]> = {
+  diploma:       ["1-1", "2-1", "2-2", "3-1", "3-2"],
+  btech:         ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"],
+  intermediate:  ["1st Year", "2nd Year"],
+  "10th":        [],
 };
+
+// Human-readable label for a semester value
+const semLabel = (val: string, categoryId?: string) => {
+  if (categoryId === "diploma" && val === "1-1") {
+    return "1st Year";
+  }
+  if (val.includes("-")) {
+    const [yr, sem] = val.split("-");
+    return `Year ${yr} – Sem ${sem}`;
+  }
+  return val;
+};
+
+// Standards that filter subjects by the semester column directly
+const SEMESTER_FILTERED = new Set(["diploma", "btech", "intermediate"]);
 
 const CategoryDetailPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [category, setCategory] = useState<Category | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [content, setContent] = useState<ContentItem[]>([]);
@@ -81,49 +76,34 @@ const CategoryDetailPage = () => {
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [selectedBranch, setSelectedBranch] = useState<string>("all");
-  const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
 
-  // Get category config
-  const config = categoryId ? categoryConfigs[categoryId] : null;
-  const hasYearFilter = !!config;
-  const hasBranchFilter = !!config?.hasBranches;
-  const hasSemesterFilter = !!(config?.semesters && selectedYear !== "all");
-  const availableSemesters = hasSemesterFilter && selectedYear !== "all" 
-    ? config?.semesters?.[selectedYear] || [] 
-    : [];
+  const semesterOptions = categoryId ? (SEMESTER_VALUES[categoryId] ?? []) : [];
+  const usesSemesterFilter = SEMESTER_FILTERED.has(categoryId ?? "");
 
-  // Get unique branches from subjects in database
-  const availableBranches = useMemo(() => {
-    const branchesFromDB = [...new Set(subjects.filter(s => s.branch).map(s => s.branch!))];
-    if (branchesFromDB.length > 0) return branchesFromDB;
-    return config?.branches || [];
-  }, [subjects, config]);
-
+  // Pre-select the user's semester from their profile when entering this category
   useEffect(() => {
     if (categoryId) {
       fetchCategoryData();
-      // Reset filters when category changes
-      setSelectedBranch("all");
-      setSelectedYear("all");
-      setSelectedSemester("all");
       setSelectedSubject("all");
+
+      // Auto-select user's semester from profile if it matches this category
+      const profileSem = profile?.year_or_semester;
+      const opts = SEMESTER_VALUES[categoryId] ?? [];
+      if (profileSem && opts.includes(profileSem)) {
+        setSelectedSemester(profileSem);
+      } else {
+        // For diploma/btech default to "all" but show prompt
+        setSelectedSemester("all");
+      }
     }
   }, [categoryId]);
 
-
-
-  // Reset semester when year changes
-  useEffect(() => {
-    setSelectedSemester("all");
-  }, [selectedYear]);
-
-  // Reset subject when branch or year changes
+  // Reset subject when semester changes
   useEffect(() => {
     setSelectedSubject("all");
-  }, [selectedBranch, selectedYear]);
+  }, [selectedSemester]);
 
   const fetchContent = async (catId: string) => {
     const { data: contentData } = await supabase
@@ -212,37 +192,17 @@ const CategoryDetailPage = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Filter subjects based on branch and year from database fields
+  // Filter subjects based on semester column (exact match from DB)
   const filteredSubjects = useMemo(() => {
-    let result = subjects;
-
-    // Filter by branch first
-    if (selectedBranch !== "all") {
-      result = result.filter(subject => {
-        // Match by branch field or if no branch is set (common subjects)
-        return subject.branch === selectedBranch || !subject.branch;
-      });
+    if (!usesSemesterFilter || selectedSemester === "all") {
+      // 10th or no filter selected: show all subjects
+      return subjects;
     }
+    // Diploma / B-Tech / Intermediate: strict semester match
+    return subjects.filter(s => (s as any).semester === selectedSemester);
+  }, [subjects, selectedSemester, usesSemesterFilter]);
 
-    // Filter by year
-    if (selectedYear !== "all") {
-      result = result.filter(subject => {
-        // Match by year field or if no year is set (common subjects)
-        return subject.year === selectedYear || !subject.year;
-      });
-    }
-
-    // Filter by semester
-    if (selectedSemester !== "all") {
-      result = result.filter(subject => {
-        return subject.semester === selectedSemester || !subject.semester;
-      });
-    }
-
-    return result;
-  }, [subjects, selectedBranch, selectedYear, selectedSemester]);
-
-  // Filter content based on all filters
+  // Filter content based on subject filter
   const filteredContent = useMemo(() => {
     let result = content;
 
@@ -251,32 +211,13 @@ const CategoryDetailPage = () => {
       result = result.filter(item => item.content_type === activeFilter);
     }
 
-    // Filter by year (from metadata)
-    if (selectedYear !== "all") {
-      result = result.filter(item => {
-        if (!item.metadata?.year) return true;
-        return item.metadata.year === selectedYear;
-      });
-    }
-
-    // Filter by semester (from metadata)
-    if (selectedSemester !== "all") {
-      result = result.filter(item => {
-        if (!item.metadata?.semester) return true;
-        return item.metadata.semester === selectedSemester;
-      });
-    }
-
     // Filter by subject - STRICT: only show files assigned to the selected subject
     if (selectedSubject !== "all") {
       result = result.filter(item => item.subject_id === selectedSubject);
-    } else if (filteredSubjects.length > 0) {
-      // When "all" is selected but subjects exist, show all content for this category
-      // (no additional subject filtering needed)
     }
 
     return result;
-  }, [content, activeFilter, selectedYear, selectedSemester, selectedSubject, filteredSubjects]);
+  }, [content, activeFilter, selectedSubject]);
 
   const contentTypes = [
     { id: "all", label: "All", icon: BookOpen },
@@ -477,132 +418,106 @@ const CategoryDetailPage = () => {
           </div>
         </div>
 
-        {/* Branch, Year, and Semester Filters */}
-        {hasYearFilter && (
+        {/* Semester Filter — for diploma, btech, intermediate */}
+        {usesSemesterFilter && semesterOptions.length > 0 && (
           <section className="animate-fade-in">
-            <div className="flex flex-wrap gap-3">
-              {hasBranchFilter && availableBranches.length > 0 && (
-                <div className="flex-1 min-w-[140px] max-w-[200px]">
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                    <GitBranch className="h-3 w-3 inline mr-1" />
-                    Select Branch
-                  </label>
-                  <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                    <SelectTrigger className="border-vrk-200">
-                      <SelectValue placeholder="All Branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Branches</SelectItem>
-                      {availableBranches.map((branch) => (
-                        <SelectItem key={branch} value={branch}>{branch}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Select Semester</span>
+              {selectedSemester !== "all" && (
+                <Badge className="gradient-primary text-primary-foreground text-xs">
+                  {semLabel(selectedSemester, categoryId)}
+                </Badge>
               )}
-
-              <div className="flex-1 min-w-[140px] max-w-[200px]">
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  <GraduationCap className="h-3 w-3 inline mr-1" />
-                  Select Year
-                </label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="border-vrk-200">
-                    <SelectValue placeholder="All Years" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {config?.years.map((year) => (
-                      <SelectItem key={year} value={year}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {config?.semesters && (
-                <div className="flex-1 min-w-[140px] max-w-[200px]">
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                    <Calendar className="h-3 w-3 inline mr-1" />
-                    Select Semester
-                  </label>
-                  <Select 
-                    value={selectedSemester} 
-                    onValueChange={setSelectedSemester}
-                    disabled={selectedYear === "all"}
-                  >
-                    <SelectTrigger className="border-vrk-200">
-                      <SelectValue placeholder="All Semesters" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Semesters</SelectItem>
-                      {availableSemesters.map((sem) => (
-                        <SelectItem key={sem} value={sem}>{sem}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedSemester("all")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                  selectedSemester === "all"
+                    ? "gradient-primary text-primary-foreground border-primary"
+                    : "border-border hover:border-primary/50 hover:bg-primary/5"
+                }`}
+              >
+                All
+              </button>
+              {semesterOptions.map(sem => (
+                <button
+                  key={sem}
+                  onClick={() => setSelectedSemester(sem)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                    selectedSemester === sem
+                      ? "gradient-primary text-primary-foreground border-primary shadow-card"
+                      : "border-border hover:border-primary/50 hover:bg-primary/5"
+                  }`}
+                >
+                  {semLabel(sem, categoryId)}
+                </button>
+              ))}
             </div>
           </section>
         )}
 
-        {/* Subjects Section - Grouped by Year */}
-        {filteredSubjects.length > 0 && (() => {
-          const groupedByYear: Record<string, Subject[]> = {};
-          filteredSubjects.forEach((subject) => {
-            const yearKey = subject.year || "General";
-            if (!groupedByYear[yearKey]) groupedByYear[yearKey] = [];
-            groupedByYear[yearKey].push(subject);
-          });
+        {/* Subjects Section */}
+        {(() => {
+          if (usesSemesterFilter && selectedSemester === "all") {
+            // Prompt user to pick a semester first
+            return (
+              <section className="animate-fade-in">
+                <div className="p-8 text-center rounded-xl border-2 border-dashed border-vrk-200">
+                  <Calendar className="h-10 w-10 mx-auto text-vrk-300 mb-3" />
+                  <h3 className="font-display font-semibold text-lg">Select a Semester</h3>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Choose your semester above to see the subjects for that semester.
+                  </p>
+                </div>
+              </section>
+            );
+          }
 
-          const yearOrder = config?.years || [];
-          const sortedYears = Object.keys(groupedByYear).sort((a, b) => {
-            if (a === "General") return -1;
-            if (b === "General") return 1;
-            return yearOrder.indexOf(a) - yearOrder.indexOf(b);
-          });
+          if (filteredSubjects.length === 0) {
+            return (
+              <section className="animate-fade-in">
+                <div className="p-8 text-center rounded-xl border-2 border-dashed border-vrk-200">
+                  <BookOpen className="h-10 w-10 mx-auto text-vrk-300 mb-3" />
+                  <h3 className="font-display font-semibold text-lg">No Subjects Found</h3>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    No subjects available for this semester yet.
+                  </p>
+                </div>
+              </section>
+            );
+          }
 
           return (
-            <section className="animate-slide-up space-y-6">
-              {sortedYears.map((yearKey) => (
-                <div key={yearKey}>
-                  <h2 className="font-display font-semibold text-lg mb-3 flex items-center gap-2">
-                    <GraduationCap className="h-5 w-5 text-primary" />
-                    {yearKey === "General" ? "General Subjects" : yearKey}
-                    {selectedBranch !== "all" && ` - ${selectedBranch}`}
-                    <Badge variant="secondary" className="text-xs ml-1">
-                      {groupedByYear[yearKey].length}
-                    </Badge>
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {groupedByYear[yearKey].map((subject) => {
-                      const subjectFiles = content.filter(c => c.subject_id === subject.id);
-                      return (
-                        <Card
-                          key={subject.id}
-                          className="p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all active:scale-[0.97] text-center"
-                          onClick={() => setSelectedSubject(subject.id)}
-                        >
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="p-3 rounded-xl gradient-soft">
-                              <BookOpen className="h-6 w-6 text-primary" />
-                            </div>
-                            <h4 className="font-medium text-xs sm:text-sm leading-tight line-clamp-2">{subject.name}</h4>
-                            <div className="flex flex-wrap items-center justify-center gap-1">
-                              {subject.semester && (
-                                <Badge variant="outline" className="text-[9px] px-1.5">{subject.semester}</Badge>
-                              )}
-                              <Badge variant="secondary" className="text-[9px] px-1.5">
-                                {subjectFiles.length} file{subjectFiles.length !== 1 ? 's' : ''}
-                              </Badge>
-                            </div>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <section className="animate-slide-up space-y-4">
+              <h2 className="font-display font-semibold text-lg flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                {selectedSemester !== "all" ? `${semLabel(selectedSemester, categoryId)} Subjects` : "All Subjects"}
+                <Badge variant="secondary" className="text-xs ml-1">{filteredSubjects.length}</Badge>
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {filteredSubjects.map((subject) => {
+                  const subjectFiles = content.filter(c => c.subject_id === subject.id);
+                  return (
+                    <Card
+                      key={subject.id}
+                      className="p-4 cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all active:scale-[0.97] text-center"
+                      onClick={() => setSelectedSubject(subject.id)}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="p-3 rounded-xl gradient-soft">
+                          <BookOpen className="h-6 w-6 text-primary" />
+                        </div>
+                        <h4 className="font-medium text-xs sm:text-sm leading-tight line-clamp-2">{subject.name}</h4>
+                        <Badge variant="secondary" className="text-[9px] px-1.5">
+                          {subjectFiles.length} file{subjectFiles.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             </section>
           );
         })()}

@@ -40,7 +40,7 @@ interface AdminPanelProps {
   onLogout: () => void;
 }
 
-type AdminView = "dashboard" | "content" | "ads" | "users" | "analytics" | "support" | "notifications" | "settings";
+type AdminView = "dashboard" | "content" | "ads" | "users" | "analytics" | "support" | "notifications" | "settings" | "subjects";
 
 interface Category {
   id: string;
@@ -77,6 +77,17 @@ interface Profile {
   created_at: string;
 }
 
+interface Subject {
+  id: string;
+  category_id: string;
+  name: string;
+  description: string | null;
+  semester: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
 interface SupportMessage {
   id: string;
   user_id: string;
@@ -95,6 +106,7 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadType, setUploadType] = useState<"content" | "advertisement">("content");
   const [notificationTitle, setNotificationTitle] = useState("");
@@ -108,6 +120,24 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
   const [editCatName, setEditCatName] = useState("");
   const [editCatDesc, setEditCatDesc] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
+
+  // ── Subject management state ──────────────────────────────────────────────
+  const [subjectFilterCat, setSubjectFilterCat] = useState<string>("all");
+  const [subjectFilterSem, setSubjectFilterSem] = useState<string>("all");
+  const [showAddSubject, setShowAddSubject] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<string | null>(null);
+  // Add form
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [newSubjectDesc, setNewSubjectDesc] = useState("");
+  const [newSubjectCatId, setNewSubjectCatId] = useState("");
+  const [newSubjectSem, setNewSubjectSem] = useState("");
+  const [newSubjectOrder, setNewSubjectOrder] = useState("0");
+  // Edit form
+  const [editSubjectName, setEditSubjectName] = useState("");
+  const [editSubjectDesc, setEditSubjectDesc] = useState("");
+  const [editSubjectSem, setEditSubjectSem] = useState("");
+  const [editSubjectOrder, setEditSubjectOrder] = useState("0");
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -124,6 +154,13 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
 
     const { data: usersData } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
     if (usersData) setUsers(usersData);
+
+    // Fetch subjects
+    const { data: subjData } = await supabase
+      .from("subjects")
+      .select("*")
+      .order("sort_order");
+    if (subjData) setSubjects(subjData as unknown as Subject[]);
 
     const { data: msgData } = await supabase
       .from("support_messages")
@@ -348,9 +385,79 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
     toast({ title: isActive ? "Category hidden" : "Category visible" });
   };
 
+  // ── Subject CRUD ──────────────────────────────────────────────────────────
+  const addSubject = async () => {
+    if (!newSubjectName.trim() || !newSubjectCatId) {
+      toast({ title: "Name and category are required", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("subjects").insert({
+      name: newSubjectName.trim(),
+      description: newSubjectDesc.trim() || null,
+      category_id: newSubjectCatId,
+      semester: newSubjectSem.trim() || null,
+      sort_order: parseInt(newSubjectOrder) || 0,
+      is_active: true,
+    } as any);
+    if (error) {
+      toast({ title: "Failed to add subject", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Subject added!" });
+      setNewSubjectName(""); setNewSubjectDesc(""); setNewSubjectCatId("");
+      setNewSubjectSem(""); setNewSubjectOrder("0");
+      setShowAddSubject(false);
+      fetchData();
+    }
+  };
+
+  const updateSubject = async (id: string) => {
+    const { error } = await supabase.from("subjects").update({
+      name: editSubjectName.trim(),
+      description: editSubjectDesc.trim() || null,
+      semester: editSubjectSem.trim() || null,
+      sort_order: parseInt(editSubjectOrder) || 0,
+    } as any).eq("id", id);
+    if (error) {
+      toast({ title: "Failed to update subject", variant: "destructive" });
+    } else {
+      toast({ title: "Subject updated!" });
+      setEditingSubject(null);
+      fetchData();
+    }
+  };
+
+  const deleteSubject = async (id: string) => {
+    const { error } = await supabase.from("subjects").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete subject", variant: "destructive" });
+    } else {
+      toast({ title: "Subject deleted" });
+      fetchData();
+    }
+  };
+
+  const toggleSubjectStatus = async (id: string, isActive: boolean) => {
+    await supabase.from("subjects").update({ is_active: !isActive } as any).eq("id", id);
+    toast({ title: isActive ? "Subject hidden" : "Subject visible" });
+    fetchData();
+  };
+
+  // ── Semester options per category slug ────────────────────────────────────
+  const getSemesterOptions = (catId: string): string[] => {
+    const cat = categories.find(c => c.id === catId);
+    if (!cat) return [];
+    switch (cat.slug) {
+      case "diploma": return ["1-1", "2-1", "2-2", "3-1", "3-2"];
+      case "btech":   return ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
+      case "intermediate": return ["1st Year", "2nd Year"];
+      default: return [];
+    }
+  };
+
   const sidebarItems = [
     { id: "dashboard" as AdminView, icon: LayoutDashboard, label: "Dashboard" },
     { id: "content" as AdminView, icon: BookOpen, label: "Content Manager" },
+    { id: "subjects" as AdminView, icon: GraduationCap, label: "Subjects Manager" },
     { id: "ads" as AdminView, icon: Image, label: "Advertisements" },
     { id: "users" as AdminView, icon: Users, label: "Users" },
     { id: "notifications" as AdminView, icon: Bell, label: "Notifications" },
@@ -524,6 +631,282 @@ const AdminPanel = ({ onLogout }: AdminPanelProps) => {
             )}
           </div>
         );
+
+      case "subjects": {
+        // Filtered subjects
+        const filteredSubjects = subjects.filter(s => {
+          const catMatch = subjectFilterCat === "all" || s.category_id === subjectFilterCat;
+          const semMatch = subjectFilterSem === "all" || (s as any).semester === subjectFilterSem;
+          return catMatch && semMatch;
+        });
+
+        const semOpts = subjectFilterCat !== "all" ? getSemesterOptions(subjectFilterCat) : [];
+
+        return (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-bold text-2xl">Subjects Manager</h2>
+                <p className="text-muted-foreground">Add, edit and delete subjects for every standard</p>
+              </div>
+              <Button className="gradient-primary" onClick={() => { setShowAddSubject(true); setEditingSubject(null); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Subject
+              </Button>
+            </div>
+
+            {/* ── Add Subject Form ──────────────────────────────────── */}
+            {showAddSubject && (
+              <Card className="p-5 border-vrk-200 bg-vrk-50/30 space-y-4">
+                <h3 className="font-semibold text-base">New Subject</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Subject Name *</label>
+                    <Input
+                      placeholder="e.g., Mathematics 2"
+                      value={newSubjectName}
+                      onChange={e => setNewSubjectName(e.target.value)}
+                      className="border-vrk-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Category (Standard) *</label>
+                    <select
+                      value={newSubjectCatId}
+                      onChange={e => { setNewSubjectCatId(e.target.value); setNewSubjectSem(""); }}
+                      className="w-full h-10 px-3 rounded-md border border-vrk-200 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Select standard...</option>
+                      {categories.filter(c => c.is_active).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Semester / Year</label>
+                    {getSemesterOptions(newSubjectCatId).length > 0 ? (
+                      <select
+                        value={newSubjectSem}
+                        onChange={e => setNewSubjectSem(e.target.value)}
+                        className="w-full h-10 px-3 rounded-md border border-vrk-200 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Select semester...</option>
+                        {getSemesterOptions(newSubjectCatId).map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        placeholder="e.g., 2-1 (or leave blank for 10th)"
+                        value={newSubjectSem}
+                        onChange={e => setNewSubjectSem(e.target.value)}
+                        className="border-vrk-200"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Sort Order</label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={newSubjectOrder}
+                      onChange={e => setNewSubjectOrder(e.target.value)}
+                      className="border-vrk-200"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Description (optional)</label>
+                    <Input
+                      placeholder="Short description of this subject"
+                      value={newSubjectDesc}
+                      onChange={e => setNewSubjectDesc(e.target.value)}
+                      className="border-vrk-200"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="gradient-primary" onClick={addSubject}>
+                    <Save className="h-4 w-4 mr-1" /> Save Subject
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowAddSubject(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* ── Filters ──────────────────────────────────────────── */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <div>
+                <select
+                  value={subjectFilterCat}
+                  onChange={e => { setSubjectFilterCat(e.target.value); setSubjectFilterSem("all"); }}
+                  className="h-9 px-3 rounded-md border border-vrk-200 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Standards</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              {semOpts.length > 0 && (
+                <div>
+                  <select
+                    value={subjectFilterSem}
+                    onChange={e => setSubjectFilterSem(e.target.value)}
+                    className="h-9 px-3 rounded-md border border-vrk-200 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="all">All Semesters</option>
+                    {semOpts.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <Badge variant="secondary" className="ml-auto">
+                {filteredSubjects.length} subject{filteredSubjects.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+
+            {/* ── Subject List ──────────────────────────────────────── */}
+            {filteredSubjects.length === 0 ? (
+              <Card className="p-12 text-center border-dashed border-2 border-vrk-200">
+                <GraduationCap className="h-12 w-12 mx-auto text-vrk-300 mb-4" />
+                <h3 className="font-display font-semibold text-lg">No Subjects Found</h3>
+                <p className="text-muted-foreground mt-2">Add subjects using the button above.</p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {filteredSubjects.map(subject => {
+                  const cat = categories.find(c => c.id === subject.category_id);
+                  const isEditing = editingSubject === subject.id;
+                  return (
+                    <Card key={subject.id} className="p-4 border-vrk-100">
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Name</label>
+                              <Input
+                                value={editSubjectName}
+                                onChange={e => setEditSubjectName(e.target.value)}
+                                className="h-9 text-sm border-vrk-200"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Semester / Year</label>
+                              {getSemesterOptions(subject.category_id).length > 0 ? (
+                                <select
+                                  value={editSubjectSem}
+                                  onChange={e => setEditSubjectSem(e.target.value)}
+                                  className="w-full h-9 px-3 rounded-md border border-vrk-200 bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                >
+                                  <option value="">No semester</option>
+                                  {getSemesterOptions(subject.category_id).map(s => (
+                                    <option key={s} value={s}>{s}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <Input
+                                  value={editSubjectSem}
+                                  onChange={e => setEditSubjectSem(e.target.value)}
+                                  className="h-9 text-sm border-vrk-200"
+                                  placeholder="e.g. 1-1"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Sort Order</label>
+                              <Input
+                                type="number"
+                                value={editSubjectOrder}
+                                onChange={e => setEditSubjectOrder(e.target.value)}
+                                className="h-9 text-sm border-vrk-200"
+                              />
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="text-xs text-muted-foreground mb-1 block">Description</label>
+                              <Input
+                                value={editSubjectDesc}
+                                onChange={e => setEditSubjectDesc(e.target.value)}
+                                placeholder="Description (optional)"
+                                className="h-9 text-sm border-vrk-200"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" className="gradient-primary" onClick={() => updateSubject(subject.id)}>
+                              <Save className="h-4 w-4 mr-1" /> Save
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingSubject(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="p-2 rounded-lg gradient-soft shrink-0">
+                              <BookOpen className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{subject.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="text-xs text-muted-foreground">{cat?.name || "Unknown"}</span>
+                                {(subject as any).semester && (
+                                  <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                    Sem {(subject as any).semester}
+                                  </Badge>
+                                )}
+                                {subject.description && (
+                                  <span className="text-xs text-muted-foreground truncate hidden md:block max-w-[200px]">
+                                    {subject.description}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Badge variant={subject.is_active ? "default" : "secondary"} className="text-xs">
+                              {subject.is_active ? "Active" : "Hidden"}
+                            </Badge>
+                            <Button
+                              variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={() => toggleSubjectStatus(subject.id, subject.is_active)}
+                              title={subject.is_active ? "Hide" : "Show"}
+                            >
+                              {subject.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={() => {
+                                setEditingSubject(subject.id);
+                                setEditSubjectName(subject.name);
+                                setEditSubjectDesc(subject.description || "");
+                                setEditSubjectSem((subject as any).semester || "");
+                                setEditSubjectOrder(String(subject.sort_order));
+                              }}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                              onClick={() => deleteSubject(subject.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      }
 
       case "ads":
         return (

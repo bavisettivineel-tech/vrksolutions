@@ -366,36 +366,6 @@ export type Database = {
         }
         Relationships: []
       }
-      deletion_requests: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          phone: string
-          reason: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          phone: string
-          reason?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          phone?: string
-          reason?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -410,10 +380,6 @@ export type Database = {
       }
       set_admin_role: {
         Args: { _name: string; _phone: string; _user_id: string }
-        Returns: boolean
-      }
-      delete_user_account: {
-        Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }

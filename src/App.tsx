@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import SplashScreen from "@/components/SplashScreen";
 import LoginScreen from "@/components/LoginScreen";
+import OnboardingScreen from "@/components/OnboardingScreen";
 import StudentHome from "@/pages/StudentHome";
 import CategoriesPage from "@/pages/CategoriesPage";
 import AccountPage from "@/pages/AccountPage";
@@ -37,16 +38,17 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
-  const { user, profile, isAdmin, isLoading, signOut } = useAuth();
+  const { user, profile, isAdmin, isLoading, signOut, refreshProfile } = useAuth();
   const location = useLocation();
 
-  // Dismiss splash screen once auth check is complete (whether logged in or not)
+  const isPublicRoute = ["/privacy-policy", "/delete-account"].includes(location.pathname);
+
+  // Show splash screen initially
   useEffect(() => {
-    if (!isLoading) {
-      const timer = setTimeout(() => setShowSplash(false), 500);
-      return () => clearTimeout(timer);
+    if (!isLoading && user) {
+      setShowSplash(false);
     }
-  }, [isLoading]);
+  }, [isLoading, user]);
 
   // Show loading while checking auth
   if (isLoading) {
@@ -57,45 +59,64 @@ const AppContent = () => {
     );
   }
 
-  const isPublicRoute = ["/privacy-policy", "/delete-account"].includes(location.pathname);
+  // Show public routes if user is not authenticated and is visiting them
+  if (!user) {
+    if (isPublicRoute) {
+      return (
+        <Routes>
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/delete-account" element={<DeleteAccountPage />} />
+          <Route path="*" element={<Navigate to="/privacy-policy" replace />} />
+        </Routes>
+      );
+    }
+    // Show splash screen
+    if (showSplash) {
+      return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    }
+    return <LoginScreen />;
+  }
 
-  // Show splash screen if not on public routes and not logged in
-  if (showSplash && !user && !isPublicRoute) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  // Show loading while profile is being fetched
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If NOT admin and onboarding not complete → show onboarding
+  if (!isAdmin && !profile.onboarding_complete) {
+    return (
+      <OnboardingScreen
+        onComplete={() => refreshProfile()}
+      />
+    );
   }
 
   const userName = profile?.name || "Student";
 
-  if (isAdmin) {
-    return (
-      <Routes>
-        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="/delete-account" element={<DeleteAccountPage />} />
-        <Route path="*" element={<AdminPanel onLogout={signOut} />} />
-      </Routes>
-    );
-  }
-
+  // Both admin and student views inherit Router context
   return (
     <>
-      {user && !isPublicRoute && <TopNavigation userName={userName} onLogout={signOut} />}
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="/delete-account" element={<DeleteAccountPage />} />
-
-        {/* Protected Student Routes / Fallbacks */}
-        <Route path="/" element={user ? <StudentHome userName={userName} /> : <LoginScreen />} />
-        <Route path="/categories" element={user ? <CategoriesPage /> : <Navigate to="/" replace />} />
-        <Route path="/category/:categoryId" element={user ? <CategoryDetailPage /> : <Navigate to="/" replace />} />
-        <Route path="/saved-pdfs" element={user ? <SavedPDFsPage /> : <Navigate to="/" replace />} />
-        <Route path="/eapcet" element={user ? <EAPCETPage /> : <Navigate to="/" replace />} />
-        <Route path="/notes-ai" element={user ? <NotesWithAIPage /> : <Navigate to="/" replace />} />
-        <Route path="/account" element={user ? <AccountPage onLogout={signOut} /> : <Navigate to="/" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      {user && !isPublicRoute && (
+      {isAdmin ? (
+        <AdminPanel onLogout={signOut} />
+      ) : (
         <>
+          <TopNavigation userName={userName} onLogout={signOut} />
+          <Routes>
+            <Route path="/" element={<StudentHome userName={userName} />} />
+            <Route path="/categories" element={<CategoriesPage />} />
+            <Route path="/category/:categoryId" element={<CategoryDetailPage />} />
+            <Route path="/saved-pdfs" element={<SavedPDFsPage />} />
+            <Route path="/eapcet" element={<EAPCETPage />} />
+            <Route path="/notes-ai" element={<NotesWithAIPage />} />
+            <Route path="/account" element={<AccountPage onLogout={signOut} />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/delete-account" element={<DeleteAccountPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
           <BottomNavigation />
           <HomeOnlyComponents />
         </>
