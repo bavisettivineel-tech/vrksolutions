@@ -40,12 +40,13 @@ const AppContent = () => {
   const { user, profile, isAdmin, isLoading, signOut } = useAuth();
   const location = useLocation();
 
-  // Show splash screen initially
+  // Dismiss splash screen once auth check is complete (whether logged in or not)
   useEffect(() => {
-    if (!isLoading && user) {
-      setShowSplash(false);
+    if (!isLoading) {
+      const timer = setTimeout(() => setShowSplash(false), 500);
+      return () => clearTimeout(timer);
     }
-  }, [isLoading, user]);
+  }, [isLoading]);
 
   // Show loading while checking auth
   if (isLoading) {
