@@ -2,21 +2,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.warn(
-    "Supabase credentials missing! Please configure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your environment variables."
-  );
-}
+// Use env vars if available, otherwise fall back to hardcoded public keys
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://svmbveclvswlufdeumgg.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2bWJ2ZWNsdnN3bHVmZGV1bWdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3NTAyMjUsImV4cCI6MjA4NTMyNjIyNX0.PFmXgA6UhPr48FBvTkJwMdjDr9M-YapI2Kkm3NHjt9M";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(
-  SUPABASE_URL || "https://placeholder-url.supabase.co",
-  SUPABASE_PUBLISHABLE_KEY || "placeholder-key",
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
   {
     auth: {
       storage: localStorage,
